@@ -1,6 +1,8 @@
+import csv
+import io
 from uuid import UUID
 
-from flask import request
+from flask import request, Response
 from flask_restful import Resource
 from flask_jwt_extended import jwt_required
 from zou.app import db
@@ -212,3 +214,64 @@ class BulkSetResource(Resource):
         db.session.commit()
 
         return {"updated": updated}
+
+
+class ExportJsonResource(Resource):
+    @jwt_required()
+    def get(self):
+        require_admin()
+
+        fields = {
+            str(field.id): field_to_dict(field)
+            for field in RestrictedMetadataField.query.all()
+        }
+
+        values = [
+            value_to_dict(value)
+            for value in RestrictedMetadataValue.query.all()
+        ]
+
+        return {
+            "fields": fields,
+            "values": values,
+        }
+
+
+class ExportCsvResource(Resource):
+    @jwt_required()
+    def get(self):
+        require_admin()
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        writer.writerow([
+            "field_id",
+            "field_name",
+            "entity_type",
+            "entity_id",
+            "value",
+        ])
+
+        fields = {
+            field.id: field
+            for field in RestrictedMetadataField.query.all()
+        }
+
+        for value in RestrictedMetadataValue.query.all():
+            field = fields.get(value.field_id)
+            writer.writerow([
+                str(value.field_id),
+                field.name if field else "",
+                value.entity_type,
+                str(value.entity_id),
+                value.value_json,
+            ])
+
+        return Response(
+            output.getvalue(),
+            mimetype="text/csv",
+            headers={
+                "Content-Disposition": "attachment; filename=restricted_metadata.csv"
+            },
+        )

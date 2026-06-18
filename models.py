@@ -4,6 +4,7 @@ from zou.app.models.base import BaseMixin
 
 class RestrictedMetadataField(db.Model, BaseMixin):
     __tablename__ = "plugin_restricted_metadata_fields"
+    __table_args__ = {"extend_existing": True}
 
     name = db.Column(db.String(120), nullable=False)
     entity_type = db.Column(db.String(30), nullable=False)
@@ -16,6 +17,7 @@ class RestrictedMetadataField(db.Model, BaseMixin):
 
 class RestrictedMetadataValue(db.Model, BaseMixin):
     __tablename__ = "plugin_restricted_metadata_values"
+    __table_args__ = {"extend_existing": True}
 
     field_id = db.Column(db.UUID(as_uuid=True), nullable=False)
     entity_type = db.Column(db.String(30), nullable=False)
