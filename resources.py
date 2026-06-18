@@ -7,6 +7,7 @@ from flask_restful import Resource
 from flask_jwt_extended import jwt_required
 from zou.app import db
 from zou.app.services import persons_service
+from zou.app.services import shots_service, assets_service, projects_service
 
 from .models import RestrictedMetadataField, RestrictedMetadataValue
 
@@ -42,11 +43,142 @@ def value_to_dict(value):
     }
 
 
+def entity_to_dict(entity):
+    return {
+        "id": str(entity.get("id")),
+        "name": entity.get("name"),
+        "code": entity.get("code"),
+        "project_id": str(entity.get("project_id")) if entity.get("project_id") else None,
+        "episode_id": str(entity.get("episode_id")) if entity.get("episode_id") else None,
+        "sequence_id": str(entity.get("sequence_id")) if entity.get("sequence_id") else None,
+        "entity_type_id": str(entity.get("entity_type_id")) if entity.get("entity_type_id") else None,
+    }
+
+
 class HealthResource(Resource):
     @jwt_required()
     def get(self):
         require_admin()
         return {"status": "ok", "plugin": "restricted-metadata"}
+
+
+class ProjectContextResource(Resource):
+    @jwt_required()
+    def get(self):
+        require_admin()
+
+        project_id = request.args.get("project_id") or request.args.get("production_id")
+        if not project_id:
+            return {"error": "project_id or production_id is required"}, 400
+
+        project = projects_service.get_project(project_id)
+
+        return {
+            "project": {
+                "id": str(project["id"]),
+                "name": project.get("name"),
+                "code": project.get("code"),
+            }
+        }
+
+
+class EpisodesResource(Resource):
+    @jwt_required()
+    def get(self):
+        require_admin()
+
+        project_id = request.args.get("project_id") or request.args.get("production_id")
+        if not project_id:
+            return {"error": "project_id or production_id is required"}, 400
+
+        episodes = shots_service.get_episodes_for_project(project_id)
+        return {"episodes": [entity_to_dict(episode) for episode in episodes]}
+
+
+class SequencesResource(Resource):
+    @jwt_required()
+    def get(self):
+        require_admin()
+
+        project_id = request.args.get("project_id") or request.args.get("production_id")
+        episode_id = request.args.get("episode_id")
+
+        if episode_id:
+            sequences = shots_service.get_sequences_for_episode(episode_id)
+        else:
+            if not project_id:
+                return {"error": "project_id or production_id is required"}, 400
+            sequences = shots_service.get_sequences_for_project(project_id)
+
+        return {"sequences": [entity_to_dict(sequence) for sequence in sequences]}
+
+
+class ShotsResource(Resource):
+    @jwt_required()
+    def get(self):
+        require_admin()
+
+        project_id = request.args.get("project_id") or request.args.get("production_id")
+        episode_id = request.args.get("episode_id")
+
+        if episode_id:
+            shots = shots_service.get_shots_for_episode(episode_id)
+        else:
+            if not project_id:
+                return {"error": "project_id or production_id is required"}, 400
+            shots = shots_service.get_shots_for_project(project_id)
+
+        sequence_id = request.args.get("sequence_id")
+        if sequence_id:
+            shots = [
+                shot for shot in shots
+                if str(shot.get("sequence_id")) == str(sequence_id)
+            ]
+
+        return {"shots": [entity_to_dict(shot) for shot in shots]}
+
+
+class AssetsResource(Resource):
+    @jwt_required()
+    def get(self):
+        require_admin()
+
+        project_id = request.args.get("project_id") or request.args.get("production_id")
+        if not project_id:
+            return {"error": "project_id or production_id is required"}, 400
+
+        assets = assets_service.get_assets({"project_id": project_id}, is_admin=True)
+
+        asset_type_id = request.args.get("asset_type_id")
+        if asset_type_id:
+            assets = [
+                asset for asset in assets
+                if str(asset.get("entity_type_id")) == str(asset_type_id)
+            ]
+
+        return {"assets": [entity_to_dict(asset) for asset in assets]}
+
+
+class AssetTypesResource(Resource):
+    @jwt_required()
+    def get(self):
+        require_admin()
+
+        project_id = request.args.get("project_id") or request.args.get("production_id")
+        if not project_id:
+            return {"error": "project_id or production_id is required"}, 400
+
+        asset_types = assets_service.get_asset_types_for_project(project_id)
+
+        return {
+            "asset_types": [
+                {
+                    "id": str(asset_type.get("id")),
+                    "name": asset_type.get("name"),
+                }
+                for asset_type in asset_types
+            ]
+        }
 
 
 class FieldsResource(Resource):
@@ -163,6 +295,17 @@ class ValuesResource(Resource):
 
         if entity_type not in VALID_ENTITY_TYPES:
             return {"error": "invalid entity_type"}, 400
+
+        existing = RestrictedMetadataValue.query.filter_by(
+            field_id=UUID(field_id),
+            entity_type=entity_type,
+            entity_id=UUID(entity_id),
+        ).first()
+
+        if existing:
+            existing.value_json = data.get("value")
+            db.session.commit()
+            return {"value": value_to_dict(existing)}
 
         value = RestrictedMetadataValue.create(
             field_id=UUID(field_id),
