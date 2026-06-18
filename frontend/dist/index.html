@@ -1,0 +1,188 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Restricted Metadata</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 24px;
+      background: #111827;
+      color: #f9fafb;
+    }
+    h1 { margin-top: 0; }
+    button {
+      padding: 8px 12px;
+      margin-right: 8px;
+      cursor: pointer;
+    }
+    .tab {
+      background: #374151;
+      color: white;
+      border: 0;
+      border-radius: 4px;
+    }
+    .tab.active {
+      background: #2563eb;
+    }
+    .panel {
+      margin-top: 24px;
+      padding: 16px;
+      background: #1f2937;
+      border-radius: 6px;
+    }
+    input, select {
+      padding: 8px;
+      margin: 4px;
+    }
+    table {
+      width: 100%;
+      margin-top: 16px;
+      border-collapse: collapse;
+    }
+    th, td {
+      border-bottom: 1px solid #374151;
+      padding: 8px;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <h1>Restricted Metadata</h1>
+
+  <div>
+    <button class="tab active" onclick="setEntityType('episode')">Episodes</button>
+    <button class="tab" onclick="setEntityType('sequence')">Sequences</button>
+    <button class="tab" onclick="setEntityType('shot')">Shots</button>
+    <button class="tab" onclick="setEntityType('asset')">Assets</button>
+  </div>
+
+  <div class="panel">
+    <h2 id="entity-title">Episodes</h2>
+
+    <h3>Create Field</h3>
+
+    <input id="field-name" placeholder="Field name">
+
+    <select id="field-type">
+      <option value="text">Text</option>
+      <option value="number">Number</option>
+      <option value="checkbox">Checkbox</option>
+      <option value="list">List of values</option>
+    </select>
+
+    <input id="field-options" placeholder="List options, comma separated">
+
+    <button onclick="createField()">Create Field</button>
+
+    <h3>Fields</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Entity Type</th>
+          <th>Field Type</th>
+          <th>Options</th>
+        </tr>
+      </thead>
+      <tbody id="fields-body"></tbody>
+    </table>
+  </div>
+
+  <script>
+    let entityType = "episode";
+
+    function apiPath(path) {
+      return "/plugins/restricted-metadata" + path;
+    }
+
+    function setEntityType(type) {
+      entityType = type;
+
+      document.querySelectorAll(".tab").forEach(button => {
+        button.classList.remove("active");
+      });
+
+      event.target.classList.add("active");
+
+      const titleMap = {
+        episode: "Episodes",
+        sequence: "Sequences",
+        shot: "Shots",
+        asset: "Assets"
+      };
+
+      document.getElementById("entity-title").innerText = titleMap[type];
+      loadFields();
+    }
+
+    async function loadFields() {
+      const response = await fetch(apiPath("/fields?entity_type=" + entityType), {
+        credentials: "include"
+      });
+
+      if (!response.ok) {
+        document.getElementById("fields-body").innerHTML =
+          "<tr><td colspan='4'>Could not load fields. Are you logged in as admin?</td></tr>";
+        return;
+      }
+
+      const data = await response.json();
+      const body = document.getElementById("fields-body");
+      body.innerHTML = "";
+
+      data.fields.forEach(field => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+          <td>${field.name}</td>
+          <td>${field.entity_type}</td>
+          <td>${field.field_type}</td>
+          <td>${JSON.stringify(field.options_json || "")}</td>
+        `;
+
+        body.appendChild(row);
+      });
+    }
+
+    async function createField() {
+      const name = document.getElementById("field-name").value.trim();
+      const fieldType = document.getElementById("field-type").value;
+      const optionsRaw = document.getElementById("field-options").value.trim();
+
+      let options = null;
+
+      if (fieldType === "list" && optionsRaw) {
+        options = optionsRaw.split(",").map(item => item.trim()).filter(Boolean);
+      }
+
+      const response = await fetch(apiPath("/fields"), {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name: name,
+          entity_type: entityType,
+          field_type: fieldType,
+          options_json: options
+        })
+      });
+
+      if (!response.ok) {
+        alert("Could not create field");
+        return;
+      }
+
+      document.getElementById("field-name").value = "";
+      document.getElementById("field-options").value = "";
+
+      loadFields();
+    }
+
+    loadFields();
+  </script>
+</body>
+</html>
