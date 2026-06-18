@@ -1,0 +1,10 @@
+id = "restricted-metadata"
+name = "Restricted Metadata"
+version = "0.1.0"
+description = "Admin-only restricted metadata for episodes, sequences, shots and assets."
+license = "MIT"
+website = "https://github.com/PeteDraper/kitsu-restricted-metadata"
+plugin_api_version = "1.0.0"
+
+frontend_studio_enabled = true
+frontend_project_enabled = true
