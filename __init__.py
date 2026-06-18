@@ -1,4 +1,5 @@
-from .resources import routes
+from . import resources
 
-def init_app(app):
-    return routes
+routes = [
+    ("/health", resources.HealthResource),
+]
