@@ -8,6 +8,10 @@ routes = [
     ("/columns", resources.ColumnsResource),
     ("/columns/<column_id>", resources.ColumnResource),
 
+    ("/groups/episodes", resources.EpisodeGroupsResource),
+    ("/groups/sequences", resources.SequenceGroupsResource),
+    ("/groups/asset-types", resources.AssetTypeGroupsResource),
+
     ("/rows/episodes", resources.EpisodeRowsResource),
     ("/rows/sequences", resources.SequenceRowsResource),
     ("/rows/shots", resources.ShotRowsResource),

@@ -47,6 +47,17 @@ def get_project_id():
     return project_id
 
 
+def get_entity_parent_id(entity):
+    return get_attr(entity, "sequence_id") or get_attr(entity, "parent_id")
+
+
+def possible_thumbnail(entity):
+    value = get_attr(entity, "preview_file_id")
+    if value:
+        return str(value)
+    return None
+
+
 def field_to_dict(field):
     return {
         "id": str(field.id),
@@ -70,17 +81,6 @@ def value_to_dict(value):
         "entity_id": str(value.entity_id),
         "value": value.value_json,
     }
-
-
-def possible_thumbnail(entity):
-    value = get_attr(entity, "preview_file_id")
-    if value:
-        return str(value)
-    return None
-
-
-def get_entity_parent_id(entity):
-    return get_attr(entity, "sequence_id") or get_attr(entity, "parent_id")
 
 
 def entity_to_dict(entity, group_id=None, group_name=None, parent_id=None, parent_name=None):
@@ -147,6 +147,136 @@ def make_table_response(project_id, entity_type, rows):
             for row in rows
         ],
     }
+
+
+def get_episode_map(project_id):
+    episodes = shots_service.get_episodes_for_project(project_id)
+    return {
+        str(get_attr(episode, "id")): get_attr(episode, "name") or ""
+        for episode in episodes
+    }
+
+
+def get_sequence_map(project_id):
+    sequences = shots_service.get_sequences_for_project(project_id)
+    return {
+        str(get_attr(sequence, "id")): get_attr(sequence, "name") or ""
+        for sequence in sequences
+    }
+
+
+def get_asset_type_map(project_id):
+    asset_types = assets_service.get_asset_types_for_project(project_id)
+    return {
+        str(get_attr(asset_type, "id")): get_attr(asset_type, "name") or ""
+        for asset_type in asset_types
+    }
+
+
+def build_episode_rows(project_id):
+    return [
+        entity_to_dict(episode)
+        for episode in shots_service.get_episodes_for_project(project_id)
+    ]
+
+
+def build_sequence_rows(project_id, episode_id=None):
+    episode_map = get_episode_map(project_id)
+
+    if episode_id:
+        sequences = shots_service.get_sequences_for_episode(episode_id)
+    else:
+        sequences = shots_service.get_sequences_for_project(project_id)
+
+    rows = []
+    for sequence in sequences:
+        seq_episode_id = str(get_entity_parent_id(sequence)) if get_entity_parent_id(sequence) else None
+        group_name = episode_map.get(seq_episode_id, "No Episode") if seq_episode_id else "No Episode"
+
+        rows.append(
+            entity_to_dict(
+                sequence,
+                group_id=seq_episode_id,
+                group_name=group_name,
+                parent_id=seq_episode_id,
+                parent_name=group_name,
+            )
+        )
+
+    rows.sort(key=lambda row: ((row["group_name"] or ""), row["name"] or ""))
+    return rows
+
+
+def build_shot_rows(project_id, episode_id=None, sequence_id=None):
+    sequence_map = get_sequence_map(project_id)
+
+    if episode_id:
+        shots = shots_service.get_shots_for_episode(episode_id)
+    else:
+        shots = shots_service.get_shots_for_project(project_id)
+
+    if sequence_id:
+        shots = [
+            shot for shot in shots
+            if str(get_entity_parent_id(shot)) == str(sequence_id)
+        ]
+
+    rows = []
+    for shot in shots:
+        shot_sequence_id = str(get_entity_parent_id(shot)) if get_entity_parent_id(shot) else None
+        group_name = sequence_map.get(shot_sequence_id, "No Sequence") if shot_sequence_id else "No Sequence"
+
+        rows.append(
+            entity_to_dict(
+                shot,
+                group_id=shot_sequence_id,
+                group_name=group_name,
+                parent_id=shot_sequence_id,
+                parent_name=group_name,
+            )
+        )
+
+    rows.sort(key=lambda row: ((row["group_name"] or ""), row["name"] or ""))
+    return rows
+
+
+def build_asset_rows(project_id, asset_type_id=None):
+    asset_type_map = get_asset_type_map(project_id)
+    assets = assets_service.get_assets({"project_id": project_id}, is_admin=True)
+
+    if asset_type_id:
+        assets = [
+            asset for asset in assets
+            if str(get_attr(asset, "entity_type_id")) == str(asset_type_id)
+        ]
+
+    rows = []
+    for asset in assets:
+        asset_group_id = str(get_attr(asset, "entity_type_id")) if get_attr(asset, "entity_type_id") else None
+        group_name = asset_type_map.get(asset_group_id, "No Asset Type") if asset_group_id else "No Asset Type"
+
+        rows.append(
+            entity_to_dict(
+                asset,
+                group_id=asset_group_id,
+                group_name=group_name,
+            )
+        )
+
+    rows.sort(key=lambda row: ((row["group_name"] or ""), row["name"] or ""))
+    return rows
+
+
+def serialise_csv_value(value):
+    if isinstance(value, list):
+        return ", ".join(str(item) for item in value)
+    if value is True:
+        return "TRUE"
+    if value is False:
+        return "FALSE"
+    if value is None:
+        return ""
+    return str(value)
 
 
 class HealthResource(Resource):
@@ -269,6 +399,102 @@ class ColumnResource(Resource):
         return {"deleted": True}
 
 
+class EpisodeGroupsResource(Resource):
+    @jwt_required()
+    def get(self):
+        require_admin()
+
+        project_id = get_project_id()
+        if not project_id:
+            return {"error": "project_id or production_id is required"}, 400
+
+        episodes = shots_service.get_episodes_for_project(project_id)
+        sequences = shots_service.get_sequences_for_project(project_id)
+
+        counts = {}
+        for sequence in sequences:
+            episode_id = str(get_entity_parent_id(sequence)) if get_entity_parent_id(sequence) else None
+            counts[episode_id] = counts.get(episode_id, 0) + 1
+
+        groups = []
+        for episode in episodes:
+            episode_id = str(get_attr(episode, "id"))
+            count = counts.get(episode_id, 0)
+
+            if count > 0:
+                groups.append({
+                    "id": episode_id,
+                    "name": get_attr(episode, "name") or "",
+                    "count": count,
+                })
+
+        return {"groups": groups}
+
+
+class SequenceGroupsResource(Resource):
+    @jwt_required()
+    def get(self):
+        require_admin()
+
+        project_id = get_project_id()
+        if not project_id:
+            return {"error": "project_id or production_id is required"}, 400
+
+        sequences = shots_service.get_sequences_for_project(project_id)
+        shots = shots_service.get_shots_for_project(project_id)
+
+        counts = {}
+        for shot in shots:
+            sequence_id = str(get_entity_parent_id(shot)) if get_entity_parent_id(shot) else None
+            counts[sequence_id] = counts.get(sequence_id, 0) + 1
+
+        groups = []
+        for sequence in sequences:
+            sequence_id = str(get_attr(sequence, "id"))
+            count = counts.get(sequence_id, 0)
+
+            if count > 0:
+                groups.append({
+                    "id": sequence_id,
+                    "name": get_attr(sequence, "name") or "",
+                    "count": count,
+                })
+
+        return {"groups": groups}
+
+
+class AssetTypeGroupsResource(Resource):
+    @jwt_required()
+    def get(self):
+        require_admin()
+
+        project_id = get_project_id()
+        if not project_id:
+            return {"error": "project_id or production_id is required"}, 400
+
+        asset_types = assets_service.get_asset_types_for_project(project_id)
+        assets = assets_service.get_assets({"project_id": project_id}, is_admin=True)
+
+        counts = {}
+        for asset in assets:
+            asset_type_id = str(get_attr(asset, "entity_type_id")) if get_attr(asset, "entity_type_id") else None
+            counts[asset_type_id] = counts.get(asset_type_id, 0) + 1
+
+        groups = []
+        for asset_type in asset_types:
+            asset_type_id = str(get_attr(asset_type, "id"))
+            count = counts.get(asset_type_id, 0)
+
+            if count > 0:
+                groups.append({
+                    "id": asset_type_id,
+                    "name": get_attr(asset_type, "name") or "",
+                    "count": count,
+                })
+
+        return {"groups": groups}
+
+
 class EpisodeRowsResource(Resource):
     @jwt_required()
     def get(self):
@@ -278,12 +504,7 @@ class EpisodeRowsResource(Resource):
         if not project_id:
             return {"error": "project_id or production_id is required"}, 400
 
-        rows = [
-            entity_to_dict(episode)
-            for episode in shots_service.get_episodes_for_project(project_id)
-        ]
-
-        return make_table_response(project_id, "episode", rows)
+        return make_table_response(project_id, "episode", build_episode_rows(project_id))
 
 
 class SequenceRowsResource(Resource):
@@ -297,33 +518,7 @@ class SequenceRowsResource(Resource):
         if not project_id:
             return {"error": "project_id or production_id is required"}, 400
 
-        episodes = shots_service.get_episodes_for_project(project_id)
-        episode_map = {
-            str(get_attr(episode, "id")): get_attr(episode, "name") or ""
-            for episode in episodes
-        }
-
-        if episode_id:
-            sequences = shots_service.get_sequences_for_episode(episode_id)
-        else:
-            sequences = shots_service.get_sequences_for_project(project_id)
-
-        rows = []
-        for sequence in sequences:
-            seq_episode_id = str(get_entity_parent_id(sequence)) if get_entity_parent_id(sequence) else None
-            rows.append(
-                entity_to_dict(
-                    sequence,
-                    group_id=seq_episode_id,
-                    group_name=episode_map.get(seq_episode_id, "No Episode") if seq_episode_id else "No Episode",
-                    parent_id=seq_episode_id,
-                    parent_name=episode_map.get(seq_episode_id, "No Episode") if seq_episode_id else "No Episode",
-                )
-            )
-
-        rows.sort(key=lambda row: ((row["group_name"] or ""), row["name"] or ""))
-
-        return make_table_response(project_id, "sequence", rows)
+        return make_table_response(project_id, "sequence", build_sequence_rows(project_id, episode_id))
 
 
 class ShotRowsResource(Resource):
@@ -338,39 +533,7 @@ class ShotRowsResource(Resource):
         if not project_id:
             return {"error": "project_id or production_id is required"}, 400
 
-        sequences = shots_service.get_sequences_for_project(project_id)
-        sequence_map = {
-            str(get_attr(sequence, "id")): get_attr(sequence, "name") or ""
-            for sequence in sequences
-        }
-
-        if episode_id:
-            shots = shots_service.get_shots_for_episode(episode_id)
-        else:
-            shots = shots_service.get_shots_for_project(project_id)
-
-        if sequence_id:
-            shots = [
-                shot for shot in shots
-                if str(get_entity_parent_id(shot)) == str(sequence_id)
-            ]
-
-        rows = []
-        for shot in shots:
-            shot_sequence_id = str(get_entity_parent_id(shot)) if get_entity_parent_id(shot) else None
-            rows.append(
-                entity_to_dict(
-                    shot,
-                    group_id=shot_sequence_id,
-                    group_name=sequence_map.get(shot_sequence_id, "No Sequence") if shot_sequence_id else "No Sequence",
-                    parent_id=shot_sequence_id,
-                    parent_name=sequence_map.get(shot_sequence_id, "No Sequence") if shot_sequence_id else "No Sequence",
-                )
-            )
-
-        rows.sort(key=lambda row: ((row["group_name"] or ""), row["name"] or ""))
-
-        return make_table_response(project_id, "shot", rows)
+        return make_table_response(project_id, "shot", build_shot_rows(project_id, episode_id, sequence_id))
 
 
 class AssetRowsResource(Resource):
@@ -384,34 +547,7 @@ class AssetRowsResource(Resource):
         if not project_id:
             return {"error": "project_id or production_id is required"}, 400
 
-        asset_types = assets_service.get_asset_types_for_project(project_id)
-        asset_type_map = {
-            str(get_attr(asset_type, "id")): get_attr(asset_type, "name") or ""
-            for asset_type in asset_types
-        }
-
-        assets = assets_service.get_assets({"project_id": project_id}, is_admin=True)
-
-        if asset_type_id:
-            assets = [
-                asset for asset in assets
-                if str(get_attr(asset, "entity_type_id")) == str(asset_type_id)
-            ]
-
-        rows = []
-        for asset in assets:
-            asset_group_id = str(get_attr(asset, "entity_type_id")) if get_attr(asset, "entity_type_id") else None
-            rows.append(
-                entity_to_dict(
-                    asset,
-                    group_id=asset_group_id,
-                    group_name=asset_type_map.get(asset_group_id, "No Asset Type") if asset_group_id else "No Asset Type",
-                )
-            )
-
-        rows.sort(key=lambda row: ((row["group_name"] or ""), row["name"] or ""))
-
-        return make_table_response(project_id, "asset", rows)
+        return make_table_response(project_id, "asset", build_asset_rows(project_id, asset_type_id))
 
 
 class CellResource(Resource):
@@ -547,50 +683,54 @@ class ExportCsvResource(Resource):
         require_admin()
 
         project_id = get_project_id()
+        entity_type = request.args.get("entity_type")
 
-        columns_query = RestrictedMetadataField.query.filter_by(is_active=True)
-        if project_id:
-            columns_query = columns_query.filter_by(project_id=UUID(str(project_id)))
+        if not project_id:
+            return {"error": "project_id or production_id is required"}, 400
 
-        columns = columns_query.all()
-        columns_by_id = {column.id: column for column in columns}
+        if entity_type not in VALID_ENTITY_TYPES:
+            return {"error": "valid entity_type is required"}, 400
+
+        columns = get_columns(project_id, entity_type)
+
+        if entity_type == "episode":
+            rows = build_episode_rows(project_id)
+        elif entity_type == "sequence":
+            rows = build_sequence_rows(project_id)
+        elif entity_type == "shot":
+            rows = build_shot_rows(project_id)
+        elif entity_type == "asset":
+            rows = build_asset_rows(project_id)
+        else:
+            rows = []
+
+        values_by_entity = get_values_for_rows(entity_type, [row["id"] for row in rows])
 
         output = io.StringIO()
         writer = csv.writer(output)
 
-        writer.writerow([
-            "project_id",
-            "entity_type",
-            "entity_id",
-            "field_id",
-            "field_name",
-            "field_type",
-            "value",
-        ])
+        header = ["Group", "Name"]
+        header += [column.name for column in columns]
+        writer.writerow(header)
 
-        if columns_by_id:
-            values = RestrictedMetadataValue.query.filter(
-                RestrictedMetadataValue.field_id.in_(list(columns_by_id.keys()))
-            ).all()
-        else:
-            values = []
+        for row in rows:
+            values = values_by_entity.get(row["id"], {})
+            csv_row = [
+                row.get("group_name") or "",
+                row.get("name") or "",
+            ]
 
-        for value in values:
-            column = columns_by_id.get(value.field_id)
-            writer.writerow([
-                str(column.project_id) if column and column.project_id else "",
-                value.entity_type,
-                str(value.entity_id),
-                str(value.field_id),
-                column.name if column else "",
-                column.field_type if column else "",
-                value.value_json,
-            ])
+            for column in columns:
+                csv_row.append(serialise_csv_value(values.get(str(column.id))))
+
+            writer.writerow(csv_row)
+
+        filename = f"restricted_metadata_{entity_type}.csv"
 
         return Response(
             output.getvalue(),
             mimetype="text/csv",
             headers={
-                "Content-Disposition": "attachment; filename=restricted_metadata.csv"
+                "Content-Disposition": f"attachment; filename={filename}"
             },
         )

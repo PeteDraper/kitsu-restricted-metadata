@@ -13,6 +13,7 @@
       --background-hover: #E1E4FF;
       --background-selected: #CFD1FF;
       --border: #DBDBDB;
+      --border-hover: #B5B5B5;
       --text: #7A7A7A;
       --text-strong: #333;
       --green: #00B242;
@@ -30,6 +31,7 @@
         --background-page: #36393F;
         --background-selected: #5E60BA;
         --border: #25282E;
+        --border-hover: #6b7280;
         --text: #EEEEEE;
         --text-strong: #FEFEFE;
       }
@@ -39,26 +41,38 @@
 
     html, body {
       margin: 0;
-      min-height: 100%;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
       background: var(--background-page);
       color: var(--text);
       font-family: Lato, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
       font-size: 14px;
     }
 
-    body { padding: 12px; }
+    body {
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      max-height: 100vh;
+      overflow: hidden;
+    }
 
     .topbar {
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
       gap: 8px;
       margin-bottom: 10px;
+      align-items: center;
     }
 
-    .tabs {
+    .left-controls,
+    .right-controls {
       display: flex;
       gap: 8px;
-      margin-bottom: 10px;
+      align-items: center;
+      flex-wrap: wrap;
     }
 
     .tab,
@@ -108,22 +122,56 @@
     }
 
     .panel {
+      flex: 1 1 auto;
+      min-height: 0;
       background: var(--background-block);
       border: 1px solid var(--border);
       border-radius: 10px;
-      overflow: visible;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
     .table-wrap {
-      overflow-x: auto;
-      overflow-y: visible;
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+      max-width: 100%;
+      overflow: auto;
       background: var(--background-block);
+      border-radius: 10px;
+      scrollbar-gutter: stable both-edges;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-hover) var(--background-alt);
+    }
+
+    .table-wrap::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    .table-wrap::-webkit-scrollbar-track {
+      background: var(--background-alt);
       border-radius: 10px;
     }
 
+    .table-wrap::-webkit-scrollbar-thumb {
+      background: var(--border-hover);
+      border-radius: 10px;
+      border: 2px solid var(--background-alt);
+    }
+
+    .table-wrap::-webkit-scrollbar-thumb:hover {
+      background: var(--text);
+    }
+
+    .table-wrap::-webkit-scrollbar-corner {
+      background: var(--background-alt);
+    }
+
     table {
-      width: 100%;
-      min-width: 900px;
+      width: max-content;
+      min-width: 100%;
       border-collapse: collapse;
       table-layout: fixed;
       background: var(--background-block);
@@ -164,12 +212,37 @@
       color: #222;
       font-weight: 700;
       vertical-align: middle;
+      border-top: 3px solid #9aa3b2;
+      border-bottom: 2px solid #9aa3b2;
+    }
+
+    .data-row-even td {
+      background: var(--background-block);
+    }
+
+    .data-row-odd td {
+      background: var(--background-alt);
+    }
+
+    .data-row-even:hover td,
+    .data-row-odd:hover td {
+      background: var(--background-hover);
     }
 
     @media (prefers-color-scheme: dark) {
       .group-row td {
         background: #25282e;
         color: var(--text-strong);
+        border-top: 3px solid #111318;
+        border-bottom: 2px solid #111318;
+      }
+
+      .data-row-even td {
+        background: var(--background-block);
+      }
+
+      .data-row-odd td {
+        background: #3f424a;
       }
     }
 
@@ -321,15 +394,17 @@
 
 <body>
   <div class="topbar">
-    <button onclick="openColumnModal()">Manage Columns</button>
-    <button onclick="downloadCsv()">Export CSV</button>
-  </div>
+    <div class="left-controls">
+      <button class="tab active" data-type="episode" onclick="setEntityType(event, 'episode')">Episodes</button>
+      <button class="tab" data-type="sequence" onclick="setEntityType(event, 'sequence')">Sequences</button>
+      <button class="tab" data-type="shot" onclick="setEntityType(event, 'shot')">Shots</button>
+      <button class="tab" data-type="asset" onclick="setEntityType(event, 'asset')">Assets</button>
+    </div>
 
-  <div class="tabs">
-    <button class="tab active" data-type="episode" onclick="setEntityType(event, 'episode')">Episodes</button>
-    <button class="tab" data-type="sequence" onclick="setEntityType(event, 'sequence')">Sequences</button>
-    <button class="tab" data-type="shot" onclick="setEntityType(event, 'shot')">Shots</button>
-    <button class="tab" data-type="asset" onclick="setEntityType(event, 'asset')">Assets</button>
+    <div class="right-controls">
+      <button onclick="openColumnModal()">Manage Columns</button>
+      <button onclick="downloadCsv()">Export CSV</button>
+    </div>
   </div>
 
   <div class="panel">
@@ -401,28 +476,37 @@
 
     let entityType = "episode";
     let projectContext = null;
-    let selectedIds = new Set();
     let activePick = null;
 
+    const selectedByTab = {
+      episode: new Set(),
+      sequence: new Set(),
+      shot: new Set(),
+      asset: new Set()
+    };
+
     const tabState = {
-      episode: { loaded: false, loading: false, columns: [], rows: [], collapsedGroups: new Set() },
-      sequence: { loaded: false, loading: false, columns: [], rows: [], collapsedGroups: new Set() },
-      shot: { loaded: false, loading: false, columns: [], rows: [], collapsedGroups: new Set() },
-      asset: { loaded: false, loading: false, columns: [], rows: [], collapsedGroups: new Set() }
+      episode: { loaded: false, loading: false, columns: [], rows: [], groups: [], groupRows: {}, expandedGroups: new Set(), hasGroups: false },
+      sequence: { loaded: false, loading: false, columns: [], rows: [], groups: [], groupRows: {}, expandedGroups: new Set(), hasGroups: false },
+      shot: { loaded: false, loading: false, columns: [], rows: [], groups: [], groupRows: {}, expandedGroups: new Set(), hasGroups: true },
+      asset: { loaded: false, loading: false, columns: [], rows: [], groups: [], groupRows: {}, expandedGroups: new Set(), hasGroups: true }
     };
 
     function apiPath(path) { return API_BASE + path; }
 
-    function currentState() {
-      return tabState[entityType];
-    }
+    function currentState() { return tabState[entityType]; }
+    function currentSelected() { return selectedByTab[entityType]; }
 
     function currentColumns() {
       return currentState().columns || [];
     }
 
     function currentRows() {
-      return currentState().rows || [];
+      const state = currentState();
+
+      if (!state.hasGroups) return state.rows || [];
+
+      return Object.values(state.groupRows).flat();
     }
 
     function titleFor(type) {
@@ -469,15 +553,20 @@
 
       if (!projectContext.has_episodes) {
         document.querySelector("[data-type='episode']").style.display = "none";
-        entityType = "sequence";
-        document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
-        document.querySelector("[data-type='sequence']").classList.add("active");
+        tabState.sequence.hasGroups = false;
+
+        if (entityType === "episode") {
+          entityType = "sequence";
+          document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
+          document.querySelector("[data-type='sequence']").classList.add("active");
+        }
+      } else {
+        tabState.sequence.hasGroups = true;
       }
     }
 
     function setEntityType(event, type) {
       entityType = type;
-      selectedIds.clear();
 
       document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
       event.target.classList.add("active");
@@ -486,16 +575,60 @@
       renderRows();
 
       if (!currentState().loaded && !currentState().loading) {
-        loadTable(type);
+        loadTab(type);
       }
     }
 
-    async function loadTable(type = entityType, force = false) {
+    async function loadColumns(type) {
+      const data = await apiGet("/columns?production_id=" + productionId + "&entity_type=" + type);
+      tabState[type].columns = data.columns || [];
+    }
+
+    async function loadGroups(type) {
+      const state = tabState[type];
+
+      if (type === "episode") {
+        state.hasGroups = false;
+        return;
+      }
+
+      if (type === "sequence") {
+        if (!projectContext.has_episodes) {
+          state.hasGroups = false;
+          return;
+        }
+
+        const data = await apiGet("/groups/episodes?production_id=" + productionId);
+        state.groups = data.groups || [];
+        state.hasGroups = true;
+        return;
+      }
+
+      if (type === "shot") {
+        const data = await apiGet("/groups/sequences?production_id=" + productionId);
+        state.groups = data.groups || [];
+        state.hasGroups = true;
+        return;
+      }
+
+      if (type === "asset") {
+        const data = await apiGet("/groups/asset-types?production_id=" + productionId);
+        state.groups = data.groups || [];
+        state.hasGroups = true;
+      }
+    }
+
+    async function loadFlatRows(type) {
+      const data = await apiGet("/rows/" + titleFor(type).toLowerCase() + "?production_id=" + productionId);
+      tabState[type].rows = data.rows || [];
+      tabState[type].columns = data.columns || tabState[type].columns || [];
+    }
+
+    async function loadTab(type = entityType, force = false) {
       const state = tabState[type];
 
       if (state.loaded && !force) {
-        renderHeader();
-        renderRows();
+        if (type === entityType) renderTable();
         return;
       }
 
@@ -507,11 +640,13 @@
           "<tr><td colspan='99' class='loading-cell'>Loading...</td></tr>";
       }
 
-      const endpoint = "/rows/" + titleFor(type).toLowerCase() + "?production_id=" + productionId;
-      const data = await apiGet(endpoint);
+      await loadColumns(type);
+      await loadGroups(type);
 
-      state.columns = data.columns || [];
-      state.rows = data.rows || [];
+      if (!state.hasGroups) {
+        await loadFlatRows(type);
+      }
+
       state.loaded = true;
       state.loading = false;
 
@@ -522,8 +657,61 @@
     }
 
     async function reloadCurrentTab() {
-      tabState[entityType].loaded = false;
-      await loadTable(entityType, true);
+      const state = currentState();
+      state.loaded = false;
+      state.rows = [];
+      state.groups = [];
+      state.groupRows = {};
+      state.expandedGroups = new Set();
+      await loadTab(entityType, true);
+    }
+
+    async function expandGroup(groupId) {
+      const state = currentState();
+
+      if (!state.expandedGroups.has(groupId)) {
+        state.expandedGroups.add(groupId);
+      }
+
+      if (state.groupRows[groupId]) {
+        renderRows();
+        return;
+      }
+
+      state.groupRows[groupId] = null;
+      renderRows();
+
+      let endpoint = "";
+
+      if (entityType === "sequence") {
+        endpoint = "/rows/sequences?production_id=" + productionId + "&episode_id=" + groupId;
+      } else if (entityType === "shot") {
+        endpoint = "/rows/shots?production_id=" + productionId + "&sequence_id=" + groupId;
+      } else if (entityType === "asset") {
+        endpoint = "/rows/assets?production_id=" + productionId + "&asset_type_id=" + groupId;
+      }
+
+      const data = await apiGet(endpoint);
+      state.groupRows[groupId] = data.rows || [];
+
+      if ((!state.columns || !state.columns.length) && data.columns) {
+        state.columns = data.columns;
+      }
+
+      renderTable();
+    }
+
+    function collapseGroup(groupId) {
+      currentState().expandedGroups.delete(groupId);
+      renderRows();
+    }
+
+    function toggleGroupCollapse(groupId) {
+      if (currentState().expandedGroups.has(groupId)) {
+        collapseGroup(groupId);
+      } else {
+        expandGroup(groupId);
+      }
     }
 
     function renderTable() {
@@ -533,6 +721,9 @@
 
     function renderHeader() {
       const columns = currentColumns();
+      const table = document.querySelector("table");
+      const minWidth = 34 + 64 + 220 + (columns.length * 180);
+      table.style.minWidth = Math.max(900, minWidth) + "px";
 
       let html = "<tr>";
       html += "<th class='check-col'></th>";
@@ -547,34 +738,8 @@
       document.getElementById("table-head").innerHTML = html;
     }
 
-    function groupRows(rows) {
-      const groups = [];
-
-      if (entityType === "episode") {
-        groups.push({ key: "__episodes__", name: "", rows });
-        return groups;
-      }
-
-      let currentGroup = null;
-
-      rows.forEach(row => {
-        const key = row.group_id || row.group_name || "Ungrouped";
-        const name = row.group_name || "Ungrouped";
-
-        if (!currentGroup || currentGroup.key !== key) {
-          currentGroup = { key, name, rows: [] };
-          groups.push(currentGroup);
-        }
-
-        currentGroup.rows.push(row);
-      });
-
-      return groups;
-    }
-
     function renderRows() {
       const state = currentState();
-      const rows = currentRows();
       const columns = currentColumns();
       const body = document.getElementById("table-body");
 
@@ -590,83 +755,94 @@
         return;
       }
 
-      if (!rows.length) {
+      if (!state.hasGroups) {
+        renderFlatRows(body, state.rows || [], columns);
+        return;
+      }
+
+      if (!state.groups.length) {
         body.innerHTML = "<tr><td colspan='99'>No rows found.</td></tr>";
         return;
       }
 
-      const groups = groupRows(rows);
+      state.groups.forEach(group => {
+        const expanded = state.expandedGroups.has(group.id);
+        const groupRows = state.groupRows[group.id];
 
-      groups.forEach(group => {
-        const isCollapsed = state.collapsedGroups.has(group.key);
+        const groupRow = document.createElement("tr");
+        groupRow.className = "group-row";
+        groupRow.innerHTML = `
+          <td class="check-col">
+            <input type="checkbox" ${isGroupFullySelected(group.id) ? "checked" : ""} onchange="toggleGroupSelection('${escapeAttr(group.id)}', this.checked)">
+          </td>
+          <td colspan="98">
+            <span class="group-title">
+              <button class="small-button" onclick="toggleGroupCollapse('${escapeAttr(group.id)}')">${expanded ? "▼" : "▶"}</button>
+              ${escapeHtml(group.name || "Ungrouped")}
+              <span class="group-count">${group.count ?? ""}</span>
+            </span>
+          </td>
+        `;
+        body.appendChild(groupRow);
 
-        if (entityType !== "episode") {
-          const groupRow = document.createElement("tr");
-          groupRow.className = "group-row";
-          groupRow.innerHTML = `
-            <td class="check-col">
-              <input type="checkbox" onchange="toggleGroupSelection('${escapeAttr(group.key)}', this.checked)">
-            </td>
-            <td colspan="98">
-              <span class="group-title">
-                <button class="small-button" onclick="toggleGroupCollapse('${escapeAttr(group.key)}')">${isCollapsed ? "▶" : "▼"}</button>
-                ${escapeHtml(group.name || "Ungrouped")}
-                <span class="group-count">${group.rows.length}</span>
-              </span>
-            </td>
-          `;
-          body.appendChild(groupRow);
+        if (!expanded) return;
+
+        if (groupRows === null) {
+          body.innerHTML += "<tr><td colspan='99' class='loading-cell'>Loading section...</td></tr>";
+          return;
         }
 
-        if (isCollapsed) return;
-
-        group.rows.forEach(row => {
-          const tr = document.createElement("tr");
-          tr.dataset.group = group.key;
-
-          let html = "";
-          html += `<td class="check-col"><input type="checkbox" class="row-check" value="${row.id}" onchange="toggleRow(this)"></td>`;
-          html += `<td class="thumb-col">${renderThumbnail(row)}</td>`;
-          html += `<td class="name-col">${escapeHtml(row.name || "")}</td>`;
-
-          columns.forEach(column => {
-            const value = row.values ? row.values[column.id] : null;
-            html += "<td class='meta-col'>" + renderCell(row, column, value) + "</td>";
-          });
-
-          tr.innerHTML = html;
-          body.appendChild(tr);
-        });
+        renderFlatRows(body, groupRows || [], columns, group.id);
       });
     }
 
-    function toggleGroupCollapse(groupKey) {
-      const state = currentState();
-
-      if (state.collapsedGroups.has(groupKey)) {
-        state.collapsedGroups.delete(groupKey);
-      } else {
-        state.collapsedGroups.add(groupKey);
+    function renderFlatRows(body, rows, columns, groupId = null) {
+      if (!rows.length) {
+        body.innerHTML += "<tr><td colspan='99'>No rows found.</td></tr>";
+        return;
       }
 
-      renderRows();
+      rows.forEach((row, rowIndex) => {
+        const tr = document.createElement("tr");
+        tr.className = rowIndex % 2 === 0 ? "data-row-even" : "data-row-odd";
+        if (groupId) tr.dataset.group = groupId;
+
+        let html = "";
+        html += `<td class="check-col"><input type="checkbox" class="row-check" value="${row.id}" ${currentSelected().has(row.id) ? "checked" : ""} onchange="toggleRow(this)"></td>`;
+        html += `<td class="thumb-col">${renderThumbnail(row)}</td>`;
+        html += `<td class="name-col">${escapeHtml(row.name || "")}</td>`;
+
+        columns.forEach(column => {
+          const value = row.values ? row.values[column.id] : null;
+          html += "<td class='meta-col'>" + renderCell(row, column, value) + "</td>";
+        });
+
+        tr.innerHTML = html;
+        body.appendChild(tr);
+      });
     }
 
-    function toggleGroupSelection(groupKey, checked) {
-      const group = groupRows(currentRows()).find(item => item.key === groupKey);
-      if (!group) return;
+    function isGroupFullySelected(groupId) {
+      const rows = currentState().groupRows[groupId] || [];
+      if (!rows.length) return false;
+      return rows.every(row => currentSelected().has(row.id));
+    }
 
-      group.rows.forEach(row => {
-        if (checked) selectedIds.add(row.id);
-        else selectedIds.delete(row.id);
+    async function toggleGroupSelection(groupId, checked) {
+      const state = currentState();
+
+      if (!state.groupRows[groupId]) {
+        await expandGroup(groupId);
+      }
+
+      const rows = state.groupRows[groupId] || [];
+
+      rows.forEach(row => {
+        if (checked) currentSelected().add(row.id);
+        else currentSelected().delete(row.id);
       });
 
       renderRows();
-
-      group.rows.forEach(row => {
-        const checkbox = document.querySelector(`.row-check[value="${row.id}"]`);
-        if (checkbox) checkbox.checked = checked;
-      });
     }
 
     function renderThumbnail(row) {
@@ -684,15 +860,15 @@
 
     function renderCell(row, column, value) {
       if (column.field_type === "checkbox") {
-        return `<input type="checkbox" ${value === true ? "checked" : ""} onchange="saveCell('${row.id}', '${column.id}', this.checked)">`;
+        return `<input type="checkbox" ${value === true ? "checked" : ""} onchange="saveCell('${row.id}', '${column.id}', this.checked, true)">`;
       }
 
       if (column.field_type === "number") {
-        return `<input class="cell-input" type="number" value="${escapeAttr(value ?? "")}" onchange="saveCell('${row.id}', '${column.id}', this.value === '' ? null : Number(this.value))">`;
+        return `<input class="cell-input" type="number" value="${escapeAttr(value ?? "")}" onchange="saveCell('${row.id}', '${column.id}', this.value === '' ? null : Number(this.value), true)">`;
       }
 
       if (column.field_type === "single_select") {
-        let html = `<select class="cell-select" onchange="saveCell('${row.id}', '${column.id}', this.value)">`;
+        let html = `<select class="cell-select" onchange="saveCell('${row.id}', '${column.id}', this.value, true)">`;
         html += "<option value=''></option>";
 
         (column.options_json || []).forEach(option => {
@@ -713,7 +889,7 @@
         return renderChecklist(row, column, Array.isArray(value) ? value : []);
       }
 
-      return `<input class="cell-input" value="${escapeAttr(value ?? "")}" onchange="saveCell('${row.id}', '${column.id}', this.value)">`;
+      return `<input class="cell-input" value="${escapeAttr(value ?? "")}" onchange="saveCell('${row.id}', '${column.id}', this.value, true)">`;
     }
 
     function renderChecklist(row, column, values) {
@@ -738,15 +914,13 @@
       const values = Array.from(wrapper.querySelectorAll("input:checked"))
         .map(input => input.parentElement.innerText.trim());
 
-      await saveCell(entityId, fieldId, values);
+      await saveCell(entityId, fieldId, values, true);
+      renderRows();
     }
 
     function openPickModal(entityId, fieldId) {
-      const columns = currentColumns();
-      const rows = currentRows();
-
-      const column = columns.find(c => c.id === fieldId);
-      const row = rows.find(r => r.id === entityId);
+      const column = currentColumns().find(c => c.id === fieldId);
+      const row = currentRows().find(r => r.id === entityId);
       const current = row && row.values && Array.isArray(row.values[fieldId]) ? row.values[fieldId] : [];
 
       activePick = { entityId, fieldId };
@@ -777,40 +951,64 @@
       const values = Array.from(document.querySelectorAll("#pick-list input:checked"))
         .map(input => input.value);
 
-      await saveCell(activePick.entityId, activePick.fieldId, values);
+      await saveCell(activePick.entityId, activePick.fieldId, values, true);
       closePickModal();
-      await reloadCurrentTab();
+      renderRows();
     }
 
-    async function saveCell(entityId, fieldId, value) {
-      let targetIds;
-
-      if (selectedIds.has(entityId) && selectedIds.size > 1) {
-        targetIds = Array.from(selectedIds);
-      } else {
-        targetIds = [entityId];
+    function getTargetIdsForEdit(entityId) {
+      if (currentSelected().has(entityId) && currentSelected().size > 1) {
+        return Array.from(currentSelected());
       }
+      return [entityId];
+    }
 
-      for (const targetId of targetIds) {
+    async function saveCell(entityId, fieldId, value, shouldRender) {
+      const targetIds = getTargetIdsForEdit(entityId);
+
+      if (targetIds.length > 1) {
+        await apiPost("/bulk-set", {
+          field_id: fieldId,
+          entity_type: entityType,
+          entity_ids: targetIds,
+          value
+        });
+      } else {
         await apiPost("/cell", {
           field_id: fieldId,
           entity_type: entityType,
-          entity_id: targetId,
+          entity_id: entityId,
           value
         });
       }
 
-      currentRows().forEach(row => {
+      applyLocalValue(targetIds, fieldId, value);
+
+      if (shouldRender) {
+        renderRows();
+      }
+    }
+
+    function applyLocalValue(targetIds, fieldId, value) {
+      const updateRow = row => {
         if (targetIds.includes(row.id)) {
           if (!row.values) row.values = {};
           row.values[fieldId] = value;
+        }
+      };
+
+      currentState().rows.forEach(updateRow);
+
+      Object.values(currentState().groupRows).forEach(groupRows => {
+        if (Array.isArray(groupRows)) {
+          groupRows.forEach(updateRow);
         }
       });
     }
 
     function toggleRow(checkbox) {
-      if (checkbox.checked) selectedIds.add(checkbox.value);
-      else selectedIds.delete(checkbox.value);
+      if (checkbox.checked) currentSelected().add(checkbox.value);
+      else currentSelected().delete(checkbox.value);
     }
 
     function openColumnModal() {
@@ -894,8 +1092,25 @@
       await reloadCurrentTab();
     }
 
+    async function reloadCurrentTab() {
+      const state = currentState();
+      state.loaded = false;
+      state.loading = false;
+      state.columns = [];
+      state.rows = [];
+      state.groups = [];
+      state.groupRows = {};
+      state.expandedGroups = new Set();
+      await loadTab(entityType, true);
+    }
+
     function downloadCsv() {
-      window.location.href = API_BASE + "/export/csv?production_id=" + productionId;
+      window.location.href =
+        API_BASE +
+        "/export/csv?production_id=" +
+        productionId +
+        "&entity_type=" +
+        entityType;
     }
 
     function escapeHtml(value) {
@@ -915,7 +1130,7 @@
     async function init() {
       try {
         await loadProject();
-        await loadTable(entityType);
+        await loadTab(entityType);
       } catch (error) {
         document.getElementById("table-body").innerHTML =
           "<tr><td colspan='99' class='error'>Administrator access required or plugin error.</td></tr>";
