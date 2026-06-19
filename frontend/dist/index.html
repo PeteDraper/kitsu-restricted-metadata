@@ -65,6 +65,7 @@
       gap: 8px;
       margin-bottom: 10px;
       align-items: center;
+      flex: 0 0 auto;
     }
 
     .left-controls,
@@ -106,10 +107,14 @@
     }
 
     .small-button {
-      padding: 3px 7px;
-      border-radius: 7px;
+      width: 22px;
+      min-width: 22px;
+      max-width: 22px;
+      padding: 2px 0;
+      border-radius: 6px;
       font-size: 12px;
-      margin-right: 6px;
+      margin-right: 4px;
+      text-align: center;
     }
 
     input, select {
@@ -170,12 +175,17 @@
     }
 
     table {
-      width: max-content;
-      min-width: 100%;
+      width: auto;
+      min-width: 0;
       border-collapse: collapse;
       table-layout: fixed;
       background: var(--background-block);
     }
+
+    col.col-check { width: 30px; }
+    col.col-thumb { width: 54px; }
+    col.col-name { width: 220px; }
+    col.col-meta { width: 180px; }
 
     th, td {
       border: 1px solid var(--border);
@@ -202,8 +212,27 @@
 
     tr:hover td { background: var(--background-hover); }
 
-    .check-col { width: 34px; min-width: 34px; max-width: 34px; resize: none; vertical-align: middle; }
-    .thumb-col { width: 64px; min-width: 64px; max-width: 64px; resize: none; vertical-align: middle; }
+    .check-col {
+      width: 30px !important;
+      min-width: 30px !important;
+      max-width: 30px !important;
+      resize: none;
+      vertical-align: middle;
+      padding: 4px 3px !important;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .thumb-col {
+      width: 54px !important;
+      min-width: 54px !important;
+      max-width: 54px !important;
+      resize: none;
+      vertical-align: middle;
+      padding: 4px 3px !important;
+      text-align: left;
+      overflow: hidden;
+    }
     .name-col { width: 220px; min-width: 160px; vertical-align: middle; }
     .meta-col { width: 180px; min-width: 110px; }
 
@@ -216,18 +245,9 @@
       border-bottom: 2px solid #9aa3b2;
     }
 
-    .data-row-even td {
-      background: var(--background-block);
-    }
-
-    .data-row-odd td {
-      background: var(--background-alt);
-    }
-
-    .data-row-even:hover td,
-    .data-row-odd:hover td {
-      background: var(--background-hover);
-    }
+    .data-row-even td { background: var(--background-block); }
+    .data-row-odd td { background: var(--background-alt); }
+    .data-row-even:hover td, .data-row-odd:hover td { background: var(--background-hover); }
 
     @media (prefers-color-scheme: dark) {
       .group-row td {
@@ -237,19 +257,57 @@
         border-bottom: 2px solid #111318;
       }
 
-      .data-row-even td {
-        background: var(--background-block);
-      }
+      .data-row-even td { background: var(--background-block); }
+      .data-row-odd td { background: #3f424a; }
+    }
 
-      .data-row-odd td {
-        background: #3f424a;
+    .nested-parent-row td {
+      border-top-width: 4px;
+    }
+
+    .nested-child-row td {
+      background: var(--background-alt);
+      border-top: 2px solid var(--border-hover);
+      border-bottom: 2px solid var(--border-hover);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .nested-child-row td {
+        background: #30333a;
       }
+    }
+
+    .nested-parent-row .check-col,
+    .nested-child-row .check-col,
+    .nested-child-row .thumb-col {
+      vertical-align: middle;
+      padding: 4px 3px !important;
+      text-align: center;
+    }
+
+    .nested-parent-row td,
+    .nested-child-row td {
+      height: 36px;
+      padding-top: 4px;
+      padding-bottom: 4px;
+    }
+
+    .nested-child-title {
+      padding-left: 0;
+    }
+
+    .nested-child-row .small-button,
+    .nested-parent-row .small-button {
+      margin-left: 0;
+      margin-right: 0;
+      padding: 2px 5px;
+      min-width: 24px;
     }
 
     .group-title {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
     }
 
     .group-count {
@@ -279,14 +337,20 @@
 
     .cell-input,
     .cell-select,
-    .cell-menu-button {
+    .cell-menu-button,
+    .formula-result {
       width: 100%;
       min-width: 100px;
-      border-color: transparent;
+      height: 30px;
+      line-height: 18px;
+      padding: 5px 8px;
+      border: 1px solid transparent;
       background: transparent;
       border-radius: 6px;
       text-align: left;
       color: var(--text);
+      font: inherit;
+      display: block;
     }
 
     .cell-input:focus,
@@ -294,6 +358,39 @@
       background: var(--background-alt-2);
       border-color: var(--green);
       outline: none;
+    }
+
+    .cell-select {
+      appearance: auto;
+    }
+
+    .cell-menu-button {
+      position: relative;
+      padding-right: 24px;
+      font-weight: 400;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .cell-menu-button::after {
+      content: "⌄";
+      position: absolute;
+      right: 8px;
+      top: 4px;
+      font-size: 16px;
+      color: var(--text);
+      opacity: 0.85;
+    }
+
+    .formula-result {
+      color: var(--text-strong);
+      cursor: default;
+    }
+
+    .formula-error {
+      color: var(--red);
+      font-weight: 700;
     }
 
     .cell-checklist {
@@ -379,6 +476,45 @@
       background: var(--background-hover);
     }
 
+    .formula-tools {
+      display: none;
+      margin: 8px 0 12px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--background-alt);
+      line-height: 1.45;
+    }
+
+    .formula-tools.open {
+      display: block;
+    }
+
+    .formula-help {
+      margin-bottom: 8px;
+    }
+
+    .formula-help code {
+      background: var(--background-block);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1px 5px;
+      color: var(--text-strong);
+    }
+
+    .formula-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .formula-buttons button {
+      padding: 4px 8px;
+      font-weight: 500;
+      border-radius: 8px;
+    }
+
     .error {
       color: var(--red);
       font-weight: 700;
@@ -426,13 +562,14 @@
       <div class="toolbar">
         <input id="column-name" placeholder="Column name">
 
-        <select id="column-type">
+        <select id="column-type" onchange="onColumnTypeChange()">
           <option value="text">Text</option>
           <option value="number">Number</option>
           <option value="checkbox">Checkbox</option>
           <option value="single_select">List of values</option>
           <option value="tags">List of tags</option>
           <option value="checklist">Checklist</option>
+          <option value="formula">Formula</option>
         </select>
 
         <input id="column-options" placeholder="Options, comma separated">
@@ -440,12 +577,26 @@
         <button class="primary" onclick="createColumn()">Create Column</button>
       </div>
 
+      <div id="formula-tools" class="formula-tools">
+        <div class="formula-help">
+          <strong>Formula help</strong><br>
+          Use column names in square brackets, for example <code>[Cost] * [Days]</code>.<br>
+          Supported operators: <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>^</code>, brackets, and percentages.<br>
+          Examples: <code>[Cost] * 1.2</code>, <code>[Area] ^ 2</code>, <code>[Price] * 10%</code>, <code>[Total] + [Markup Formula]</code>.<br>
+          Checkbox columns count as <code>1</code> when checked and <code>0</code> when unchecked.<br>
+          Text/List values are valid only when the cell content is numeric. Tags and Checklist columns cannot be used in formulas.<br>
+          Formula columns can reference other formula columns, but circular references will display <code>ERROR</code>.
+        </div>
+        <div>Click a column below to insert it into the formula:</div>
+        <div class="formula-buttons" id="formula-buttons"></div>
+      </div>
+
       <table class="column-list">
         <thead>
           <tr>
             <th>Name</th>
             <th>Type</th>
-            <th>Options</th>
+            <th>Options / Formula</th>
             <th></th>
           </tr>
         </thead>
@@ -488,25 +639,19 @@
     const tabState = {
       episode: { loaded: false, loading: false, columns: [], rows: [], groups: [], groupRows: {}, expandedGroups: new Set(), hasGroups: false },
       sequence: { loaded: false, loading: false, columns: [], rows: [], groups: [], groupRows: {}, expandedGroups: new Set(), hasGroups: false },
-      shot: { loaded: false, loading: false, columns: [], rows: [], groups: [], groupRows: {}, expandedGroups: new Set(), hasGroups: true },
-      asset: { loaded: false, loading: false, columns: [], rows: [], groups: [], groupRows: {}, expandedGroups: new Set(), hasGroups: true }
+      shot: { loaded: false, loading: false, columns: [], rows: [], groups: [], groupRows: {}, expandedGroups: new Set(), hasGroups: true, nestedGroups: false },
+      asset: { loaded: false, loading: false, columns: [], rows: [], groups: [], groupRows: {}, expandedGroups: new Set(), hasGroups: true, nestedGroups: false }
     };
 
     function apiPath(path) { return API_BASE + path; }
-
     function currentState() { return tabState[entityType]; }
     function currentSelected() { return selectedByTab[entityType]; }
-
-    function currentColumns() {
-      return currentState().columns || [];
-    }
+    function currentColumns() { return currentState().columns || []; }
 
     function currentRows() {
       const state = currentState();
-
       if (!state.hasGroups) return state.rows || [];
-
-      return Object.values(state.groupRows).flat();
+      return Object.values(state.groupRows).flat().filter(Boolean);
     }
 
     function titleFor(type) {
@@ -587,6 +732,8 @@
     async function loadGroups(type) {
       const state = tabState[type];
 
+      state.nestedGroups = false;
+
       if (type === "episode") {
         state.hasGroups = false;
         return;
@@ -601,20 +748,37 @@
         const data = await apiGet("/groups/episodes?production_id=" + productionId);
         state.groups = data.groups || [];
         state.hasGroups = true;
+        state.nestedGroups = false;
         return;
       }
 
       if (type === "shot") {
-        const data = await apiGet("/groups/sequences?production_id=" + productionId);
-        state.groups = data.groups || [];
-        state.hasGroups = true;
+        if (projectContext.has_episodes) {
+          const data = await apiGet("/groups/shot-episodes?production_id=" + productionId);
+          state.groups = data.groups || [];
+          state.hasGroups = true;
+          state.nestedGroups = true;
+        } else {
+          const data = await apiGet("/groups/sequences?production_id=" + productionId);
+          state.groups = data.groups || [];
+          state.hasGroups = true;
+          state.nestedGroups = false;
+        }
         return;
       }
 
       if (type === "asset") {
-        const data = await apiGet("/groups/asset-types?production_id=" + productionId);
-        state.groups = data.groups || [];
-        state.hasGroups = true;
+        if (projectContext.has_episodes) {
+          const data = await apiGet("/groups/asset-packs?production_id=" + productionId);
+          state.groups = data.groups || [];
+          state.hasGroups = true;
+          state.nestedGroups = true;
+        } else {
+          const data = await apiGet("/groups/asset-types?production_id=" + productionId);
+          state.groups = data.groups || [];
+          state.hasGroups = true;
+          state.nestedGroups = false;
+        }
       }
     }
 
@@ -636,8 +800,7 @@
 
       if (type === entityType) {
         renderHeader();
-        document.getElementById("table-body").innerHTML =
-          "<tr><td colspan='99' class='loading-cell'>Loading...</td></tr>";
+        document.getElementById("table-body").innerHTML = "";
       }
 
       await loadColumns(type);
@@ -659,6 +822,8 @@
     async function reloadCurrentTab() {
       const state = currentState();
       state.loaded = false;
+      state.loading = false;
+      state.columns = [];
       state.rows = [];
       state.groups = [];
       state.groupRows = {};
@@ -673,6 +838,13 @@
         state.expandedGroups.add(groupId);
       }
 
+      // Top-level nested groups do not load rows directly.
+      // They only reveal their child groups.
+      if (state.nestedGroups && !groupId.includes("::")) {
+        renderRows();
+        return;
+      }
+
       if (state.groupRows[groupId]) {
         renderRows();
         return;
@@ -684,11 +856,26 @@
       let endpoint = "";
 
       if (entityType === "sequence") {
-        endpoint = "/rows/sequences?production_id=" + productionId + "&episode_id=" + groupId;
+        endpoint = "/rows/sequences?production_id=" + productionId + "&episode_id=" + encodeURIComponent(groupId);
       } else if (entityType === "shot") {
-        endpoint = "/rows/shots?production_id=" + productionId + "&sequence_id=" + groupId;
+        const sequenceId = state.nestedGroups ? groupId.split("::")[1] : groupId;
+        endpoint = "/rows/shots?production_id=" + productionId + "&sequence_id=" + encodeURIComponent(sequenceId);
       } else if (entityType === "asset") {
-        endpoint = "/rows/assets?production_id=" + productionId + "&asset_type_id=" + groupId;
+        if (state.nestedGroups) {
+          const parts = groupId.split("::");
+          const parentId = parts[0];
+          const assetTypeId = parts[1];
+
+          endpoint =
+            "/rows/assets?production_id=" +
+            productionId +
+            "&parent_id=" +
+            encodeURIComponent(parentId) +
+            "&asset_type_id=" +
+            encodeURIComponent(assetTypeId);
+        } else {
+          endpoint = "/rows/assets?production_id=" + productionId + "&asset_type_id=" + encodeURIComponent(groupId);
+        }
       }
 
       const data = await apiGet(endpoint);
@@ -707,11 +894,8 @@
     }
 
     function toggleGroupCollapse(groupId) {
-      if (currentState().expandedGroups.has(groupId)) {
-        collapseGroup(groupId);
-      } else {
-        expandGroup(groupId);
-      }
+      if (currentState().expandedGroups.has(groupId)) collapseGroup(groupId);
+      else expandGroup(groupId);
     }
 
     function renderTable() {
@@ -722,8 +906,18 @@
     function renderHeader() {
       const columns = currentColumns();
       const table = document.querySelector("table");
-      const minWidth = 34 + 64 + 220 + (columns.length * 180);
-      table.style.minWidth = Math.max(900, minWidth) + "px";
+      const minWidth = 30 + 54 + 220 + (columns.length * 180);
+      table.style.width = minWidth + "px";
+      table.style.minWidth = minWidth + "px";
+
+      let colgroup = "<colgroup>";
+      colgroup += "<col class='col-check'>";
+      colgroup += "<col class='col-thumb'>";
+      colgroup += "<col class='col-name'>";
+      columns.forEach(() => {
+        colgroup += "<col class='col-meta'>";
+      });
+      colgroup += "</colgroup>";
 
       let html = "<tr>";
       html += "<th class='check-col'></th>";
@@ -735,7 +929,18 @@
       });
 
       html += "</tr>";
+
+      const existingColgroup = table.querySelector("colgroup");
+      if (existingColgroup) existingColgroup.remove();
+
+      table.insertAdjacentHTML("afterbegin", colgroup);
       document.getElementById("table-head").innerHTML = html;
+    }
+
+    function groupLabelColspan(extraUsedColumns = 1) {
+      // Total columns = checkbox + thumbnail + name + metadata columns.
+      // extraUsedColumns is how many leading fixed columns are already occupied by this group row.
+      return Math.max(1, currentColumns().length + 3 - extraUsedColumns);
     }
 
     function renderRows() {
@@ -746,7 +951,7 @@
       body.innerHTML = "";
 
       if (state.loading) {
-        body.innerHTML = "<tr><td colspan='99' class='loading-cell'>Loading...</td></tr>";
+        body.innerHTML = "";
         return;
       }
 
@@ -765,6 +970,11 @@
         return;
       }
 
+      if (state.nestedGroups) {
+        renderNestedGroups(body, state, columns);
+        return;
+      }
+
       state.groups.forEach(group => {
         const expanded = state.expandedGroups.has(group.id);
         const groupRows = state.groupRows[group.id];
@@ -775,7 +985,7 @@
           <td class="check-col">
             <input type="checkbox" ${isGroupFullySelected(group.id) ? "checked" : ""} onchange="toggleGroupSelection('${escapeAttr(group.id)}', this.checked)">
           </td>
-          <td colspan="98">
+          <td colspan="${groupLabelColspan(1)}">
             <span class="group-title">
               <button class="small-button" onclick="toggleGroupCollapse('${escapeAttr(group.id)}')">${expanded ? "▼" : "▶"}</button>
               ${escapeHtml(group.name || "Ungrouped")}
@@ -788,11 +998,66 @@
         if (!expanded) return;
 
         if (groupRows === null) {
-          body.innerHTML += "<tr><td colspan='99' class='loading-cell'>Loading section...</td></tr>";
           return;
         }
 
         renderFlatRows(body, groupRows || [], columns, group.id);
+      });
+    }
+
+    function renderNestedGroups(body, state, columns) {
+      state.groups.forEach(parentGroup => {
+        const parentExpanded = state.expandedGroups.has(parentGroup.id);
+
+        const parentRow = document.createElement("tr");
+        parentRow.className = "group-row nested-parent-row";
+        parentRow.innerHTML = `
+          <td class="check-col">
+            <button class="small-button" onclick="toggleGroupCollapse('${escapeAttr(parentGroup.id)}')">${parentExpanded ? "▼" : "▶"}</button>
+          </td>
+          <td colspan="${groupLabelColspan(1)}">
+            <span class="group-title">
+              ${escapeHtml(parentGroup.name || "Ungrouped")}
+              <span class="group-count">${parentGroup.count ?? ""}</span>
+            </span>
+          </td>
+        `;
+        body.appendChild(parentRow);
+
+        if (!parentExpanded) return;
+
+        (parentGroup.children || []).forEach(childGroup => {
+          const childKey = parentGroup.id + "::" + childGroup.id;
+          const childExpanded = state.expandedGroups.has(childKey);
+          const groupRows = state.groupRows[childKey];
+
+          const childRow = document.createElement("tr");
+          childRow.className = "group-row nested-child-row";
+          childRow.innerHTML = `
+            <td class="check-col">
+              <input type="checkbox" ${isGroupFullySelected(childKey) ? "checked" : ""} onchange="toggleGroupSelection('${escapeAttr(childKey)}', this.checked)">
+            </td>
+            <td class="thumb-col">
+              <button class="small-button" onclick="toggleGroupCollapse('${escapeAttr(childKey)}')">${childExpanded ? "▼" : "▶"}</button>
+            </td>
+            <td colspan="${groupLabelColspan(2)}">
+              <span class="group-title nested-child-title">
+                ${escapeHtml(childGroup.name || "Ungrouped")}
+                <span class="group-count">${childGroup.count ?? ""}</span>
+              </span>
+            </td>
+          `;
+          body.appendChild(childRow);
+
+          if (!childExpanded) return;
+
+          if (groupRows === null) {
+            body.innerHTML += "<tr><td colspan='99' class='loading-cell'>Loading section...</td></tr>";
+            return;
+          }
+
+          renderFlatRows(body, groupRows || [], columns, childKey);
+        });
       });
     }
 
@@ -859,6 +1124,10 @@
     }
 
     function renderCell(row, column, value) {
+      if (column.field_type === "formula") {
+        return renderFormula(row, column);
+      }
+
       if (column.field_type === "checkbox") {
         return `<input type="checkbox" ${value === true ? "checked" : ""} onchange="saveCell('${row.id}', '${column.id}', this.checked, true)">`;
       }
@@ -890,6 +1159,97 @@
       }
 
       return `<input class="cell-input" value="${escapeAttr(value ?? "")}" onchange="saveCell('${row.id}', '${column.id}', this.value, true)">`;
+    }
+
+    function getFormulaText(column) {
+      if (!column.options_json) return "";
+      if (typeof column.options_json === "string") return column.options_json;
+      if (Array.isArray(column.options_json)) return column.options_json.join(" ");
+      if (typeof column.options_json === "object") return column.options_json.formula || "";
+      return "";
+    }
+
+    function renderFormula(row, column) {
+      const result = evaluateFormula(row, column);
+      const isError = result === "ERROR";
+      return `<span class="formula-result ${isError ? "formula-error" : ""}">${escapeHtml(result)}</span>`;
+    }
+
+    function evaluateFormula(row, formulaColumn, visitedFormulaIds = new Set()) {
+      try {
+        if (visitedFormulaIds.has(formulaColumn.id)) {
+          throw new Error("circular formula reference");
+        }
+
+        visitedFormulaIds.add(formulaColumn.id);
+
+        let formula = getFormulaText(formulaColumn).trim();
+
+        if (!formula) return "";
+
+        const columns = currentColumns();
+
+        formula = formula.replace(/\[([^\]]+)\]/g, function(match, columnName) {
+          const referencedColumn = columns.find(c => c.name === columnName);
+
+          if (!referencedColumn) throw new Error("missing column");
+
+          if (referencedColumn.field_type === "tags" || referencedColumn.field_type === "checklist") {
+            throw new Error("invalid column type");
+          }
+
+          if (referencedColumn.field_type === "formula") {
+            const nestedValue = evaluateFormula(row, referencedColumn, new Set(visitedFormulaIds));
+            const nestedNumber = Number(nestedValue);
+
+            if (!Number.isFinite(nestedNumber)) {
+              throw new Error("invalid nested formula");
+            }
+
+            return String(nestedNumber);
+          }
+
+          const rawValue = row.values ? row.values[referencedColumn.id] : null;
+
+          if (referencedColumn.field_type === "checkbox") {
+            return rawValue === true ? "1" : "0";
+          }
+
+          const numberValue = Number(rawValue);
+
+          if (!Number.isFinite(numberValue)) throw new Error("non numeric value");
+
+          return String(numberValue);
+        });
+
+        formula = normaliseFormulaExpression(formula);
+
+        if (!/^[0-9+\-*/().\s]+$/.test(formula)) {
+          throw new Error("unsafe formula");
+        }
+
+        const result = Function('"use strict"; return (' + formula + ')')();
+
+        if (!Number.isFinite(result)) {
+          throw new Error("bad result");
+        }
+
+        return String(result);
+      } catch (error) {
+        return "ERROR";
+      }
+    }
+
+    function normaliseFormulaExpression(formula) {
+      let expression = formula;
+
+      expression = expression.replace(/(\d+(?:\.\d+)?)\s*%/g, function(match, numberPart) {
+        return "(" + numberPart + "/100)";
+      });
+
+      expression = expression.replace(/\^/g, "**");
+
+      return expression;
     }
 
     function renderChecklist(row, column, values) {
@@ -1014,10 +1374,47 @@
     function openColumnModal() {
       document.getElementById("column-modal").classList.add("open");
       renderColumnManager();
+      renderFormulaButtons();
+      onColumnTypeChange();
     }
 
     function closeColumnModal() {
       document.getElementById("column-modal").classList.remove("open");
+    }
+
+    function onColumnTypeChange() {
+      const type = document.getElementById("column-type").value;
+      const optionsInput = document.getElementById("column-options");
+      const formulaTools = document.getElementById("formula-tools");
+
+      if (type === "formula") {
+        optionsInput.placeholder = "Formula, e.g. [Cost] * [Days]";
+        formulaTools.classList.add("open");
+      } else {
+        optionsInput.placeholder = "Options, comma separated";
+        formulaTools.classList.remove("open");
+      }
+    }
+
+    function renderFormulaButtons() {
+      const box = document.getElementById("formula-buttons");
+      if (!box) return;
+
+      box.innerHTML = "";
+
+      currentColumns()
+        .filter(column => !["tags", "checklist"].includes(column.field_type))
+        .forEach(column => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.innerText = column.name;
+          button.onclick = function() {
+            const input = document.getElementById("column-options");
+            input.value += (input.value ? " " : "") + "[" + column.name + "]";
+            input.focus();
+          };
+          box.appendChild(button);
+        });
     }
 
     function renderColumnManager() {
@@ -1029,11 +1426,23 @@
         tr.innerHTML = `
           <td><input value="${escapeAttr(column.name)}" onchange="updateColumn('${column.id}', 'name', this.value)"></td>
           <td>${fieldTypeLabel(column.field_type)}</td>
-          <td><input value="${escapeAttr((column.options_json || []).join(', '))}" onchange="updateColumnOptions('${column.id}', this.value)"></td>
+          <td><input value="${escapeAttr(getColumnOptionsDisplay(column))}" onchange="updateColumnOptions('${column.id}', this.value)"></td>
           <td><button class="danger" onclick="deleteColumn('${column.id}')">Delete</button></td>
         `;
         body.appendChild(tr);
       });
+    }
+
+    function getColumnOptionsDisplay(column) {
+      if (column.field_type === "formula") {
+        return getFormulaText(column);
+      }
+
+      if (Array.isArray(column.options_json)) {
+        return column.options_json.join(", ");
+      }
+
+      return "";
     }
 
     function fieldTypeLabel(type) {
@@ -1043,7 +1452,8 @@
         checkbox: "Checkbox",
         single_select: "List of values",
         tags: "List of tags",
-        checklist: "Checklist"
+        checklist: "Checklist",
+        formula: "Formula"
       }[type] || type;
     }
 
@@ -1055,8 +1465,16 @@
     }
 
     async function updateColumnOptions(columnId, raw) {
-      const options = raw.split(",").map(x => x.trim()).filter(Boolean);
-      await apiPatch("/columns/" + columnId, { options_json: options });
+      const column = currentColumns().find(c => c.id === columnId);
+      let optionsJson;
+
+      if (column && column.field_type === "formula") {
+        optionsJson = { formula: raw };
+      } else {
+        optionsJson = raw.split(",").map(x => x.trim()).filter(Boolean);
+      }
+
+      await apiPatch("/columns/" + columnId, { options_json: optionsJson });
       await reloadCurrentTab();
     }
 
@@ -1076,7 +1494,13 @@
         return;
       }
 
-      const options = rawOptions ? rawOptions.split(",").map(x => x.trim()).filter(Boolean) : [];
+      let options;
+
+      if (fieldType === "formula") {
+        options = { formula: rawOptions };
+      } else {
+        options = rawOptions ? rawOptions.split(",").map(x => x.trim()).filter(Boolean) : [];
+      }
 
       await apiPost("/columns", {
         production_id: productionId,
@@ -1088,20 +1512,7 @@
 
       document.getElementById("column-name").value = "";
       document.getElementById("column-options").value = "";
-
       await reloadCurrentTab();
-    }
-
-    async function reloadCurrentTab() {
-      const state = currentState();
-      state.loaded = false;
-      state.loading = false;
-      state.columns = [];
-      state.rows = [];
-      state.groups = [];
-      state.groupRows = {};
-      state.expandedGroups = new Set();
-      await loadTab(entityType, true);
     }
 
     function downloadCsv() {
@@ -1127,8 +1538,46 @@
       return escapeHtml(value === null || value === undefined ? "" : value);
     }
 
+
+    function hideKitsuEpisodeSelector() {
+      try {
+        if (!window.parent || window.parent === window) return;
+
+        const parentDocument = window.parent.document;
+        const selectors = [
+          ".episode-selector",
+          ".episodes-selector",
+          ".episode-select",
+          "[data-testid='episode-selector']",
+          "[data-cy='episode-selector']"
+        ];
+
+        selectors.forEach(selector => {
+          parentDocument.querySelectorAll(selector).forEach(element => {
+            element.dataset.restrictedMetadataHidden = "true";
+            element.style.display = "none";
+          });
+        });
+
+        parentDocument.querySelectorAll("button, .button, .select, select, .navbar-item").forEach(element => {
+          const text = (element.innerText || element.textContent || "").trim().toLowerCase();
+          if (
+            text === "episode" ||
+            text.startsWith("episode ") ||
+            text.includes("episodes")
+          ) {
+            element.dataset.restrictedMetadataHidden = "true";
+            element.style.display = "none";
+          }
+        });
+      } catch (error) {
+        // Plugin iframe may not be allowed to alter the parent shell. Safe to ignore.
+      }
+    }
+
     async function init() {
       try {
+        hideKitsuEpisodeSelector();
         await loadProject();
         await loadTab(entityType);
       } catch (error) {

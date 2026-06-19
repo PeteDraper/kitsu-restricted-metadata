@@ -10,7 +10,9 @@ routes = [
 
     ("/groups/episodes", resources.EpisodeGroupsResource),
     ("/groups/sequences", resources.SequenceGroupsResource),
+    ("/groups/shot-episodes", resources.ShotNestedGroupsResource),
     ("/groups/asset-types", resources.AssetTypeGroupsResource),
+    ("/groups/asset-packs", resources.AssetNestedGroupsResource),
 
     ("/rows/episodes", resources.EpisodeRowsResource),
     ("/rows/sequences", resources.SequenceRowsResource),
