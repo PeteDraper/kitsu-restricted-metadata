@@ -4,185 +4,778 @@
   <meta charset="utf-8">
   <title>Restricted Metadata</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      padding: 24px;
-      background: #111827;
-      color: #f9fafb;
+    :root {
+      --background: #FFFFFF;
+      --background-alt: #F6F6F6;
+      --background-alt-2: #FFF;
+      --background-block: #FFFFFF;
+      --background-page: #F6F6F6;
+      --background-hover: #E1E4FF;
+      --background-selected: #CFD1FF;
+      --border: #DBDBDB;
+      --text: #7A7A7A;
+      --text-strong: #333;
+      --green: #00B242;
+      --red: #FF3860;
+      --white: #FEFEFE;
     }
-    h1 { margin-top: 0; }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background: #36393F;
+        --background-alt: #46494F;
+        --background-alt-2: #46494F;
+        --background-block: #46494F;
+        --background-hover: #5E6169;
+        --background-page: #36393F;
+        --background-selected: #5E60BA;
+        --border: #25282E;
+        --text: #EEEEEE;
+        --text-strong: #FEFEFE;
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--background-page);
+      color: var(--text);
+      font-family: Lato, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      font-size: 14px;
+    }
+
+    body { padding: 12px; }
+
+    .topbar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .tab,
     button {
-      padding: 8px 12px;
-      margin-right: 8px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--background-alt-2);
+      color: var(--text);
+      padding: 7px 11px;
       cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
     }
-    .tab {
-      background: #374151;
-      color: white;
-      border: 0;
-      border-radius: 4px;
-    }
+
     .tab.active {
-      background: #2563eb;
+      border-color: var(--green);
+      color: var(--text-strong);
+      background: var(--background-hover);
     }
-    .panel {
-      margin-top: 24px;
-      padding: 16px;
-      background: #1f2937;
-      border-radius: 6px;
+
+    button.primary {
+      background: var(--green);
+      color: var(--white);
+      border-color: var(--green);
     }
+
+    button.danger {
+      background: var(--red);
+      color: var(--white);
+      border-color: var(--red);
+    }
+
     input, select {
-      padding: 8px;
-      margin: 4px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--background-alt-2);
+      color: var(--text);
+      padding: 7px 9px;
+      font: inherit;
     }
+
+    .panel {
+      background: var(--background-block);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: visible;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      overflow-y: visible;
+      background: var(--background-block);
+      border-radius: 10px;
+    }
+
     table {
       width: 100%;
-      margin-top: 16px;
+      min-width: 900px;
       border-collapse: collapse;
+      table-layout: fixed;
+      background: var(--background-block);
     }
+
     th, td {
-      border-bottom: 1px solid #374151;
-      padding: 8px;
+      border: 1px solid var(--border);
       text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--background-alt);
+      color: var(--text-strong);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 7px 8px;
+      resize: horizontal;
+      overflow: auto;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    td {
+      padding: 4px 7px;
+      min-height: 36px;
+    }
+
+    tr:hover td { background: var(--background-hover); }
+
+    .check-col { width: 34px; min-width: 34px; max-width: 34px; resize: none; vertical-align: middle; }
+    .thumb-col { width: 64px; min-width: 64px; max-width: 64px; resize: none; vertical-align: middle; }
+    .name-col { width: 220px; min-width: 160px; vertical-align: middle; }
+    .meta-col { width: 180px; min-width: 110px; }
+
+    .group-row td {
+      background: #dfe3ea;
+      color: #222;
+      font-weight: 700;
+      vertical-align: middle;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .group-row td {
+        background: #25282e;
+        color: var(--text-strong);
+      }
+    }
+
+    .thumb {
+      width: 48px;
+      height: 28px;
+      object-fit: cover;
+      display: block;
+      border-radius: 6px;
+      background: var(--background-alt);
+      border: 1px solid var(--border);
+    }
+
+    .thumb-placeholder {
+      width: 48px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--background-alt);
+      border: 1px solid var(--border);
+    }
+
+    .cell-input,
+    .cell-select,
+    .cell-menu-button {
+      width: 100%;
+      min-width: 100px;
+      border-color: transparent;
+      background: transparent;
+      border-radius: 6px;
+      text-align: left;
+      color: var(--text);
+    }
+
+    .cell-input:focus,
+    .cell-select:focus {
+      background: var(--background-alt-2);
+      border-color: var(--green);
+      outline: none;
+    }
+
+    .cell-checklist {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 3px 0;
+      min-width: 140px;
+    }
+
+    .cell-checklist label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      line-height: 18px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .cell-checklist input {
+      margin: 0;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0,0,0,0.45);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.open { display: flex; }
+
+    .modal-box {
+      width: min(920px, calc(100vw - 48px));
+      max-height: calc(100vh - 48px);
+      overflow: auto;
+      background: var(--background-block);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 18px;
+      color: var(--text-strong);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .column-list {
+      width: 100%;
+      min-width: auto;
+      table-layout: auto;
+    }
+
+    .pick-list label {
+      display: block;
+      padding: 8px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    .pick-list label:hover {
+      background: var(--background-hover);
+    }
+
+    .error {
+      color: var(--red);
+      font-weight: 700;
+      padding: 10px;
     }
   </style>
 </head>
-<body>
-  <h1>Restricted Metadata</h1>
 
-  <div>
-    <button class="tab active" onclick="setEntityType('episode')">Episodes</button>
-    <button class="tab" onclick="setEntityType('sequence')">Sequences</button>
-    <button class="tab" onclick="setEntityType('shot')">Shots</button>
-    <button class="tab" onclick="setEntityType('asset')">Assets</button>
+<body>
+  <div class="topbar">
+    <button onclick="openColumnModal()">Manage Columns</button>
+    <button onclick="downloadCsv()">Export CSV</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-type="episode" onclick="setEntityType(event, 'episode')">Episodes</button>
+    <button class="tab" data-type="sequence" onclick="setEntityType(event, 'sequence')">Sequences</button>
+    <button class="tab" data-type="shot" onclick="setEntityType(event, 'shot')">Shots</button>
+    <button class="tab" data-type="asset" onclick="setEntityType(event, 'asset')">Assets</button>
   </div>
 
   <div class="panel">
-    <h2 id="entity-title">Episodes</h2>
+    <div class="table-wrap">
+      <table>
+        <thead id="table-head"></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
 
-    <h3>Create Field</h3>
+  <div id="column-modal" class="modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>Manage Columns</h2>
+        <button onclick="closeColumnModal()">Close</button>
+      </div>
 
-    <input id="field-name" placeholder="Field name">
+      <div class="toolbar">
+        <input id="column-name" placeholder="Column name">
 
-    <select id="field-type">
-      <option value="text">Text</option>
-      <option value="number">Number</option>
-      <option value="checkbox">Checkbox</option>
-      <option value="list">List of values</option>
-    </select>
+        <select id="column-type">
+          <option value="text">Text</option>
+          <option value="number">Number</option>
+          <option value="checkbox">Checkbox</option>
+          <option value="single_select">List of values</option>
+          <option value="tags">List of tags</option>
+          <option value="checklist">Checklist</option>
+        </select>
 
-    <input id="field-options" placeholder="List options, comma separated">
+        <input id="column-options" placeholder="Options, comma separated">
 
-    <button onclick="createField()">Create Field</button>
+        <button class="primary" onclick="createColumn()">Create Column</button>
+      </div>
 
-    <h3>Fields</h3>
+      <table class="column-list">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Options</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="columns-body"></tbody>
+      </table>
+    </div>
+  </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Entity Type</th>
-          <th>Field Type</th>
-          <th>Options</th>
-        </tr>
-      </thead>
-      <tbody id="fields-body"></tbody>
-    </table>
+  <div id="pick-modal" class="modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 id="pick-title">Select Tags</h2>
+        <button onclick="closePickModal()">Close</button>
+      </div>
+
+      <div id="pick-list" class="pick-list"></div>
+
+      <div class="toolbar" style="margin-top: 12px;">
+        <button class="primary" onclick="savePickModal()">Apply</button>
+      </div>
+    </div>
   </div>
 
   <script>
+    const API_BASE = "/api/plugins/restricted-metadata";
+    const params = new URLSearchParams(window.location.search);
+    const productionId = params.get("production_id") || params.get("project_id");
+
     let entityType = "episode";
+    let projectContext = null;
+    let columns = [];
+    let rows = [];
+    let selectedIds = new Set();
+    let activePick = null;
 
-    function apiPath(path) {
-      return "/plugins/restricted-metadata" + path;
+    function apiPath(path) { return API_BASE + path; }
+
+    function titleFor(type) {
+      return { episode: "Episodes", sequence: "Sequences", shot: "Shots", asset: "Assets" }[type] || type;
     }
 
-    function setEntityType(type) {
-      entityType = type;
-
-      document.querySelectorAll(".tab").forEach(button => {
-        button.classList.remove("active");
-      });
-
-      event.target.classList.add("active");
-
-      const titleMap = {
-        episode: "Episodes",
-        sequence: "Sequences",
-        shot: "Shots",
-        asset: "Assets"
-      };
-
-      document.getElementById("entity-title").innerText = titleMap[type];
-      loadFields();
+    async function apiGet(path) {
+      const response = await fetch(apiPath(path), { credentials: "include" });
+      if (!response.ok) throw new Error(await response.text());
+      return await response.json();
     }
 
-    async function loadFields() {
-      const response = await fetch(apiPath("/fields?entity_type=" + entityType), {
-        credentials: "include"
-      });
-
-      if (!response.ok) {
-        document.getElementById("fields-body").innerHTML =
-          "<tr><td colspan='4'>Could not load fields. Are you logged in as admin?</td></tr>";
-        return;
-      }
-
-      const data = await response.json();
-      const body = document.getElementById("fields-body");
-      body.innerHTML = "";
-
-      data.fields.forEach(field => {
-        const row = document.createElement("tr");
-
-        row.innerHTML = `
-          <td>${field.name}</td>
-          <td>${field.entity_type}</td>
-          <td>${field.field_type}</td>
-          <td>${JSON.stringify(field.options_json || "")}</td>
-        `;
-
-        body.appendChild(row);
-      });
-    }
-
-    async function createField() {
-      const name = document.getElementById("field-name").value.trim();
-      const fieldType = document.getElementById("field-type").value;
-      const optionsRaw = document.getElementById("field-options").value.trim();
-
-      let options = null;
-
-      if (fieldType === "list" && optionsRaw) {
-        options = optionsRaw.split(",").map(item => item.trim()).filter(Boolean);
-      }
-
-      const response = await fetch(apiPath("/fields"), {
+    async function apiPost(path, payload) {
+      const response = await fetch(apiPath(path), {
         method: "POST",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          name: name,
-          entity_type: entityType,
-          field_type: fieldType,
-          options_json: options
-        })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error(await response.text());
+      return await response.json();
+    }
+
+    async function apiPatch(path, payload) {
+      const response = await fetch(apiPath(path), {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error(await response.text());
+      return await response.json();
+    }
+
+    async function apiDelete(path) {
+      const response = await fetch(apiPath(path), { method: "DELETE", credentials: "include" });
+      if (!response.ok) throw new Error(await response.text());
+      return await response.json();
+    }
+
+    async function loadProject() {
+      const data = await apiGet("/context?production_id=" + productionId);
+      projectContext = data.project;
+
+      if (!projectContext.has_episodes) {
+        document.querySelector("[data-type='episode']").style.display = "none";
+        entityType = "sequence";
+        document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
+        document.querySelector("[data-type='sequence']").classList.add("active");
+      }
+    }
+
+    function setEntityType(event, type) {
+      entityType = type;
+      selectedIds.clear();
+      document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
+      event.target.classList.add("active");
+      loadTable();
+    }
+
+    async function loadTable() {
+      selectedIds.clear();
+      const endpoint = "/rows/" + titleFor(entityType).toLowerCase() + "?production_id=" + productionId;
+      const data = await apiGet(endpoint);
+      columns = data.columns || [];
+      rows = data.rows || [];
+      renderTable();
+      renderColumnManager();
+    }
+
+    function renderTable() {
+      renderHeader();
+      renderRows();
+    }
+
+    function renderHeader() {
+      let html = "<tr>";
+      html += "<th class='check-col'></th>";
+      html += "<th class='thumb-col'></th>";
+      html += "<th class='name-col'>Name</th>";
+
+      columns.forEach(column => {
+        html += "<th class='meta-col'>" + escapeHtml(column.name) + "</th>";
       });
 
-      if (!response.ok) {
-        alert("Could not create field");
+      html += "</tr>";
+      document.getElementById("table-head").innerHTML = html;
+    }
+
+    function renderRows() {
+      const body = document.getElementById("table-body");
+      body.innerHTML = "";
+
+      if (!rows.length) {
+        body.innerHTML = "<tr><td colspan='99'>No rows found.</td></tr>";
         return;
       }
 
-      document.getElementById("field-name").value = "";
-      document.getElementById("field-options").value = "";
+      let lastGroup = null;
 
-      loadFields();
+      rows.forEach(row => {
+        const group = row.group_name || "";
+
+        if (entityType !== "episode" && group !== lastGroup) {
+          const groupRow = document.createElement("tr");
+          groupRow.className = "group-row";
+          groupRow.innerHTML = `
+            <td class="check-col"><input type="checkbox" onchange="toggleGroup('${escapeAttr(group)}', this.checked)"></td>
+            <td colspan="98">${escapeHtml(group || "Ungrouped")}</td>
+          `;
+          body.appendChild(groupRow);
+          lastGroup = group;
+        }
+
+        const tr = document.createElement("tr");
+        tr.dataset.group = group;
+
+        let html = "";
+        html += `<td class="check-col"><input type="checkbox" class="row-check" value="${row.id}" onchange="toggleRow(this)"></td>`;
+        html += `<td class="thumb-col">${renderThumbnail(row)}</td>`;
+        html += `<td class="name-col">${escapeHtml(row.name || "")}</td>`;
+
+        columns.forEach(column => {
+          const value = row.values ? row.values[column.id] : null;
+          html += "<td class='meta-col'>" + renderCell(row, column, value) + "</td>";
+        });
+
+        tr.innerHTML = html;
+        body.appendChild(tr);
+      });
     }
 
-    loadFields();
+    function renderThumbnail(row) {
+      if (!row.thumbnail_id) return "<div class='thumb-placeholder'></div>";
+      const id = row.thumbnail_id;
+
+      return `
+        <img
+          class="thumb"
+          src="/api/pictures/thumbnails/preview-files/${id}.png"
+          onerror="this.onerror=null; this.src='/api/pictures/originals/preview-files/${id}.png'"
+        >
+      `;
+    }
+
+    function renderCell(row, column, value) {
+      if (column.field_type === "checkbox") {
+        return `<input type="checkbox" ${value === true ? "checked" : ""} onchange="saveCell('${row.id}', '${column.id}', this.checked)">`;
+      }
+
+      if (column.field_type === "number") {
+        return `<input class="cell-input" type="number" value="${escapeAttr(value ?? "")}" onchange="saveCell('${row.id}', '${column.id}', this.value === '' ? null : Number(this.value))">`;
+      }
+
+      if (column.field_type === "single_select") {
+        let html = `<select class="cell-select" onchange="saveCell('${row.id}', '${column.id}', this.value)">`;
+        html += "<option value=''></option>";
+
+        (column.options_json || []).forEach(option => {
+          html += `<option value="${escapeAttr(option)}" ${option === value ? "selected" : ""}>${escapeHtml(option)}</option>`;
+        });
+
+        html += "</select>";
+        return html;
+      }
+
+      if (column.field_type === "tags") {
+        const values = Array.isArray(value) ? value : [];
+        const label = values.length ? values.join(", ") : "Select...";
+        return `<button class="cell-menu-button" onclick="openPickModal('${row.id}', '${column.id}')">${escapeHtml(label)}</button>`;
+      }
+
+      if (column.field_type === "checklist") {
+        return renderChecklist(row, column, Array.isArray(value) ? value : []);
+      }
+
+      return `<input class="cell-input" value="${escapeAttr(value ?? "")}" onchange="saveCell('${row.id}', '${column.id}', this.value)">`;
+    }
+
+    function renderChecklist(row, column, values) {
+      let html = `<div class="cell-checklist">`;
+
+      (column.options_json || []).forEach(option => {
+        const checked = values.includes(option) ? "checked" : "";
+        html += `
+          <label>
+            <input type="checkbox" ${checked} onchange="saveChecklist('${row.id}', '${column.id}', this)">
+            ${escapeHtml(option)}
+          </label>
+        `;
+      });
+
+      html += "</div>";
+      return html;
+    }
+
+    async function saveChecklist(entityId, fieldId, changedCheckbox) {
+      const wrapper = changedCheckbox.closest(".cell-checklist");
+      const values = Array.from(wrapper.querySelectorAll("input:checked"))
+        .map(input => input.parentElement.innerText.trim());
+
+      await saveCell(entityId, fieldId, values);
+    }
+
+    function openPickModal(entityId, fieldId) {
+      const column = columns.find(c => c.id === fieldId);
+      const row = rows.find(r => r.id === entityId);
+      const current = row && row.values && Array.isArray(row.values[fieldId]) ? row.values[fieldId] : [];
+
+      activePick = { entityId, fieldId };
+
+      document.getElementById("pick-title").innerText = "Select Tags";
+
+      const list = document.getElementById("pick-list");
+      list.innerHTML = "";
+
+      (column.options_json || []).forEach(option => {
+        const checked = current.includes(option) ? "checked" : "";
+        const label = document.createElement("label");
+        label.innerHTML = `<input type="checkbox" value="${escapeAttr(option)}" ${checked}> ${escapeHtml(option)}`;
+        list.appendChild(label);
+      });
+
+      document.getElementById("pick-modal").classList.add("open");
+    }
+
+    function closePickModal() {
+      document.getElementById("pick-modal").classList.remove("open");
+      activePick = null;
+    }
+
+    async function savePickModal() {
+      if (!activePick) return;
+
+      const values = Array.from(document.querySelectorAll("#pick-list input:checked"))
+        .map(input => input.value);
+
+      await saveCell(activePick.entityId, activePick.fieldId, values);
+      closePickModal();
+      await loadTable();
+    }
+
+    async function saveCell(entityId, fieldId, value) {
+      let targetIds;
+
+      if (selectedIds.has(entityId) && selectedIds.size > 1) {
+        targetIds = Array.from(selectedIds);
+      } else {
+        targetIds = [entityId];
+      }
+
+      for (const targetId of targetIds) {
+        await apiPost("/cell", {
+          field_id: fieldId,
+          entity_type: entityType,
+          entity_id: targetId,
+          value
+        });
+      }
+
+      rows.forEach(row => {
+        if (targetIds.includes(row.id)) {
+          if (!row.values) row.values = {};
+          row.values[fieldId] = value;
+        }
+      });
+    }
+
+    function toggleRow(checkbox) {
+      if (checkbox.checked) selectedIds.add(checkbox.value);
+      else selectedIds.delete(checkbox.value);
+    }
+
+    function toggleGroup(groupName, checked) {
+      document.querySelectorAll("tr").forEach(row => {
+        if (row.dataset.group === groupName) {
+          const checkbox = row.querySelector(".row-check");
+          if (checkbox) {
+            checkbox.checked = checked;
+            if (checked) selectedIds.add(checkbox.value);
+            else selectedIds.delete(checkbox.value);
+          }
+        }
+      });
+    }
+
+    function openColumnModal() {
+      document.getElementById("column-modal").classList.add("open");
+      renderColumnManager();
+    }
+
+    function closeColumnModal() {
+      document.getElementById("column-modal").classList.remove("open");
+    }
+
+    function renderColumnManager() {
+      const body = document.getElementById("columns-body");
+      body.innerHTML = "";
+
+      columns.forEach(column => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><input value="${escapeAttr(column.name)}" onchange="updateColumn('${column.id}', 'name', this.value)"></td>
+          <td>${fieldTypeLabel(column.field_type)}</td>
+          <td><input value="${escapeAttr((column.options_json || []).join(', '))}" onchange="updateColumnOptions('${column.id}', this.value)"></td>
+          <td><button class="danger" onclick="deleteColumn('${column.id}')">Delete</button></td>
+        `;
+        body.appendChild(tr);
+      });
+    }
+
+    function fieldTypeLabel(type) {
+      return {
+        text: "Text",
+        number: "Number",
+        checkbox: "Checkbox",
+        single_select: "List of values",
+        tags: "List of tags",
+        checklist: "Checklist"
+      }[type] || type;
+    }
+
+    async function updateColumn(columnId, key, value) {
+      const payload = {};
+      payload[key] = value;
+      await apiPatch("/columns/" + columnId, payload);
+      await loadTable();
+    }
+
+    async function updateColumnOptions(columnId, raw) {
+      const options = raw.split(",").map(x => x.trim()).filter(Boolean);
+      await apiPatch("/columns/" + columnId, { options_json: options });
+      await loadTable();
+    }
+
+    async function deleteColumn(columnId) {
+      if (!confirm("Delete this restricted metadata column? Existing cell values will be hidden with the column.")) return;
+      await apiDelete("/columns/" + columnId);
+      await loadTable();
+    }
+
+    async function createColumn() {
+      const name = document.getElementById("column-name").value.trim();
+      const fieldType = document.getElementById("column-type").value;
+      const rawOptions = document.getElementById("column-options").value.trim();
+
+      if (!name) {
+        alert("Enter a column name.");
+        return;
+      }
+
+      const options = rawOptions ? rawOptions.split(",").map(x => x.trim()).filter(Boolean) : [];
+
+      await apiPost("/columns", {
+        production_id: productionId,
+        entity_type: entityType,
+        name,
+        field_type: fieldType,
+        options_json: options
+      });
+
+      document.getElementById("column-name").value = "";
+      document.getElementById("column-options").value = "";
+      await loadTable();
+    }
+
+    function downloadCsv() {
+      window.location.href = API_BASE + "/export/csv?production_id=" + productionId;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function escapeAttr(value) {
+      if (Array.isArray(value)) value = value.join(", ");
+      return escapeHtml(value === null || value === undefined ? "" : value);
+    }
+
+    async function init() {
+      try {
+        await loadProject();
+        await loadTable();
+      } catch (error) {
+        document.getElementById("table-body").innerHTML =
+          "<tr><td colspan='99' class='error'>Administrator access required or plugin error.</td></tr>";
+      }
+    }
+
+    init();
   </script>
 </body>
 </html>

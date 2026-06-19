@@ -4,18 +4,19 @@ routes = [
     ("/health", resources.HealthResource),
 
     ("/context", resources.ProjectContextResource),
-    ("/episodes", resources.EpisodesResource),
-    ("/sequences", resources.SequencesResource),
-    ("/shots", resources.ShotsResource),
-    ("/assets", resources.AssetsResource),
-    ("/asset-types", resources.AssetTypesResource),
 
-    ("/fields", resources.FieldsResource),
-    ("/fields/<field_id>", resources.FieldResource),
+    ("/columns", resources.ColumnsResource),
+    ("/columns/<column_id>", resources.ColumnResource),
 
-    ("/values", resources.ValuesResource),
+    ("/rows/episodes", resources.EpisodeRowsResource),
+    ("/rows/sequences", resources.SequenceRowsResource),
+    ("/rows/shots", resources.ShotRowsResource),
+    ("/rows/assets", resources.AssetRowsResource),
 
+    ("/cell", resources.CellResource),
     ("/bulk-set", resources.BulkSetResource),
+
+    ("/asset-types", resources.AssetTypesResource),
 
     ("/export/json", resources.ExportJsonResource),
     ("/export/csv", resources.ExportCsvResource),
