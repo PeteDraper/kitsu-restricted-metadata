@@ -91,6 +91,13 @@
       border-color: var(--red);
     }
 
+    .small-button {
+      padding: 3px 7px;
+      border-radius: 7px;
+      font-size: 12px;
+      margin-right: 6px;
+    }
+
     input, select {
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -164,6 +171,19 @@
         background: #25282e;
         color: var(--text-strong);
       }
+    }
+
+    .group-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .group-count {
+      color: var(--text);
+      font-weight: 500;
+      opacity: 0.75;
+      margin-left: 8px;
     }
 
     .thumb {
@@ -291,6 +311,11 @@
       font-weight: 700;
       padding: 10px;
     }
+
+    .loading-cell {
+      padding: 14px;
+      color: var(--text);
+    }
   </style>
 </head>
 
@@ -376,12 +401,29 @@
 
     let entityType = "episode";
     let projectContext = null;
-    let columns = [];
-    let rows = [];
     let selectedIds = new Set();
     let activePick = null;
 
+    const tabState = {
+      episode: { loaded: false, loading: false, columns: [], rows: [], collapsedGroups: new Set() },
+      sequence: { loaded: false, loading: false, columns: [], rows: [], collapsedGroups: new Set() },
+      shot: { loaded: false, loading: false, columns: [], rows: [], collapsedGroups: new Set() },
+      asset: { loaded: false, loading: false, columns: [], rows: [], collapsedGroups: new Set() }
+    };
+
     function apiPath(path) { return API_BASE + path; }
+
+    function currentState() {
+      return tabState[entityType];
+    }
+
+    function currentColumns() {
+      return currentState().columns || [];
+    }
+
+    function currentRows() {
+      return currentState().rows || [];
+    }
 
     function titleFor(type) {
       return { episode: "Episodes", sequence: "Sequences", shot: "Shots", asset: "Assets" }[type] || type;
@@ -436,19 +478,52 @@
     function setEntityType(event, type) {
       entityType = type;
       selectedIds.clear();
+
       document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
       event.target.classList.add("active");
-      loadTable();
+
+      renderHeader();
+      renderRows();
+
+      if (!currentState().loaded && !currentState().loading) {
+        loadTable(type);
+      }
     }
 
-    async function loadTable() {
-      selectedIds.clear();
-      const endpoint = "/rows/" + titleFor(entityType).toLowerCase() + "?production_id=" + productionId;
+    async function loadTable(type = entityType, force = false) {
+      const state = tabState[type];
+
+      if (state.loaded && !force) {
+        renderHeader();
+        renderRows();
+        return;
+      }
+
+      state.loading = true;
+
+      if (type === entityType) {
+        renderHeader();
+        document.getElementById("table-body").innerHTML =
+          "<tr><td colspan='99' class='loading-cell'>Loading...</td></tr>";
+      }
+
+      const endpoint = "/rows/" + titleFor(type).toLowerCase() + "?production_id=" + productionId;
       const data = await apiGet(endpoint);
-      columns = data.columns || [];
-      rows = data.rows || [];
-      renderTable();
-      renderColumnManager();
+
+      state.columns = data.columns || [];
+      state.rows = data.rows || [];
+      state.loaded = true;
+      state.loading = false;
+
+      if (type === entityType) {
+        renderTable();
+        renderColumnManager();
+      }
+    }
+
+    async function reloadCurrentTab() {
+      tabState[entityType].loaded = false;
+      await loadTable(entityType, true);
     }
 
     function renderTable() {
@@ -457,6 +532,8 @@
     }
 
     function renderHeader() {
+      const columns = currentColumns();
+
       let html = "<tr>";
       html += "<th class='check-col'></th>";
       html += "<th class='thumb-col'></th>";
@@ -470,46 +547,125 @@
       document.getElementById("table-head").innerHTML = html;
     }
 
+    function groupRows(rows) {
+      const groups = [];
+
+      if (entityType === "episode") {
+        groups.push({ key: "__episodes__", name: "", rows });
+        return groups;
+      }
+
+      let currentGroup = null;
+
+      rows.forEach(row => {
+        const key = row.group_id || row.group_name || "Ungrouped";
+        const name = row.group_name || "Ungrouped";
+
+        if (!currentGroup || currentGroup.key !== key) {
+          currentGroup = { key, name, rows: [] };
+          groups.push(currentGroup);
+        }
+
+        currentGroup.rows.push(row);
+      });
+
+      return groups;
+    }
+
     function renderRows() {
+      const state = currentState();
+      const rows = currentRows();
+      const columns = currentColumns();
       const body = document.getElementById("table-body");
+
       body.innerHTML = "";
+
+      if (state.loading) {
+        body.innerHTML = "<tr><td colspan='99' class='loading-cell'>Loading...</td></tr>";
+        return;
+      }
+
+      if (!state.loaded) {
+        body.innerHTML = "<tr><td colspan='99' class='loading-cell'>Click tab to load.</td></tr>";
+        return;
+      }
 
       if (!rows.length) {
         body.innerHTML = "<tr><td colspan='99'>No rows found.</td></tr>";
         return;
       }
 
-      let lastGroup = null;
+      const groups = groupRows(rows);
 
-      rows.forEach(row => {
-        const group = row.group_name || "";
+      groups.forEach(group => {
+        const isCollapsed = state.collapsedGroups.has(group.key);
 
-        if (entityType !== "episode" && group !== lastGroup) {
+        if (entityType !== "episode") {
           const groupRow = document.createElement("tr");
           groupRow.className = "group-row";
           groupRow.innerHTML = `
-            <td class="check-col"><input type="checkbox" onchange="toggleGroup('${escapeAttr(group)}', this.checked)"></td>
-            <td colspan="98">${escapeHtml(group || "Ungrouped")}</td>
+            <td class="check-col">
+              <input type="checkbox" onchange="toggleGroupSelection('${escapeAttr(group.key)}', this.checked)">
+            </td>
+            <td colspan="98">
+              <span class="group-title">
+                <button class="small-button" onclick="toggleGroupCollapse('${escapeAttr(group.key)}')">${isCollapsed ? "▶" : "▼"}</button>
+                ${escapeHtml(group.name || "Ungrouped")}
+                <span class="group-count">${group.rows.length}</span>
+              </span>
+            </td>
           `;
           body.appendChild(groupRow);
-          lastGroup = group;
         }
 
-        const tr = document.createElement("tr");
-        tr.dataset.group = group;
+        if (isCollapsed) return;
 
-        let html = "";
-        html += `<td class="check-col"><input type="checkbox" class="row-check" value="${row.id}" onchange="toggleRow(this)"></td>`;
-        html += `<td class="thumb-col">${renderThumbnail(row)}</td>`;
-        html += `<td class="name-col">${escapeHtml(row.name || "")}</td>`;
+        group.rows.forEach(row => {
+          const tr = document.createElement("tr");
+          tr.dataset.group = group.key;
 
-        columns.forEach(column => {
-          const value = row.values ? row.values[column.id] : null;
-          html += "<td class='meta-col'>" + renderCell(row, column, value) + "</td>";
+          let html = "";
+          html += `<td class="check-col"><input type="checkbox" class="row-check" value="${row.id}" onchange="toggleRow(this)"></td>`;
+          html += `<td class="thumb-col">${renderThumbnail(row)}</td>`;
+          html += `<td class="name-col">${escapeHtml(row.name || "")}</td>`;
+
+          columns.forEach(column => {
+            const value = row.values ? row.values[column.id] : null;
+            html += "<td class='meta-col'>" + renderCell(row, column, value) + "</td>";
+          });
+
+          tr.innerHTML = html;
+          body.appendChild(tr);
         });
+      });
+    }
 
-        tr.innerHTML = html;
-        body.appendChild(tr);
+    function toggleGroupCollapse(groupKey) {
+      const state = currentState();
+
+      if (state.collapsedGroups.has(groupKey)) {
+        state.collapsedGroups.delete(groupKey);
+      } else {
+        state.collapsedGroups.add(groupKey);
+      }
+
+      renderRows();
+    }
+
+    function toggleGroupSelection(groupKey, checked) {
+      const group = groupRows(currentRows()).find(item => item.key === groupKey);
+      if (!group) return;
+
+      group.rows.forEach(row => {
+        if (checked) selectedIds.add(row.id);
+        else selectedIds.delete(row.id);
+      });
+
+      renderRows();
+
+      group.rows.forEach(row => {
+        const checkbox = document.querySelector(`.row-check[value="${row.id}"]`);
+        if (checkbox) checkbox.checked = checked;
       });
     }
 
@@ -586,6 +742,9 @@
     }
 
     function openPickModal(entityId, fieldId) {
+      const columns = currentColumns();
+      const rows = currentRows();
+
       const column = columns.find(c => c.id === fieldId);
       const row = rows.find(r => r.id === entityId);
       const current = row && row.values && Array.isArray(row.values[fieldId]) ? row.values[fieldId] : [];
@@ -620,7 +779,7 @@
 
       await saveCell(activePick.entityId, activePick.fieldId, values);
       closePickModal();
-      await loadTable();
+      await reloadCurrentTab();
     }
 
     async function saveCell(entityId, fieldId, value) {
@@ -641,7 +800,7 @@
         });
       }
 
-      rows.forEach(row => {
+      currentRows().forEach(row => {
         if (targetIds.includes(row.id)) {
           if (!row.values) row.values = {};
           row.values[fieldId] = value;
@@ -652,19 +811,6 @@
     function toggleRow(checkbox) {
       if (checkbox.checked) selectedIds.add(checkbox.value);
       else selectedIds.delete(checkbox.value);
-    }
-
-    function toggleGroup(groupName, checked) {
-      document.querySelectorAll("tr").forEach(row => {
-        if (row.dataset.group === groupName) {
-          const checkbox = row.querySelector(".row-check");
-          if (checkbox) {
-            checkbox.checked = checked;
-            if (checked) selectedIds.add(checkbox.value);
-            else selectedIds.delete(checkbox.value);
-          }
-        }
-      });
     }
 
     function openColumnModal() {
@@ -680,7 +826,7 @@
       const body = document.getElementById("columns-body");
       body.innerHTML = "";
 
-      columns.forEach(column => {
+      currentColumns().forEach(column => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
           <td><input value="${escapeAttr(column.name)}" onchange="updateColumn('${column.id}', 'name', this.value)"></td>
@@ -707,19 +853,19 @@
       const payload = {};
       payload[key] = value;
       await apiPatch("/columns/" + columnId, payload);
-      await loadTable();
+      await reloadCurrentTab();
     }
 
     async function updateColumnOptions(columnId, raw) {
       const options = raw.split(",").map(x => x.trim()).filter(Boolean);
       await apiPatch("/columns/" + columnId, { options_json: options });
-      await loadTable();
+      await reloadCurrentTab();
     }
 
     async function deleteColumn(columnId) {
       if (!confirm("Delete this restricted metadata column? Existing cell values will be hidden with the column.")) return;
       await apiDelete("/columns/" + columnId);
-      await loadTable();
+      await reloadCurrentTab();
     }
 
     async function createColumn() {
@@ -744,7 +890,8 @@
 
       document.getElementById("column-name").value = "";
       document.getElementById("column-options").value = "";
-      await loadTable();
+
+      await reloadCurrentTab();
     }
 
     function downloadCsv() {
@@ -768,7 +915,7 @@
     async function init() {
       try {
         await loadProject();
-        await loadTable();
+        await loadTable(entityType);
       } catch (error) {
         document.getElementById("table-body").innerHTML =
           "<tr><td colspan='99' class='error'>Administrator access required or plugin error.</td></tr>";
