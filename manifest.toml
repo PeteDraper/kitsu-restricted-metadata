@@ -7,8 +7,8 @@ website = "https://github.com/PeteDraper/kitsu-restricted-metadata"
 plugin_api_version = "1.0.0"
 
 maintainer_name = "Pete Draper"
-maintainer_email = "nmcc27rmct@privaterelay.appleid.com"
+maintainer_email = "petedraper@me.com"
 
-frontend_studio_enabled = true
+frontend_studio_enabled = false
 frontend_project_enabled = true
 icon = "lock"
