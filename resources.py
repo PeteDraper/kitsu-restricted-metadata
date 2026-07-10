@@ -23,6 +23,7 @@ VALID_FIELD_TYPES = {
     "tags",
     "checklist",
     "formula",
+    "linked",
 }
 
 
@@ -121,6 +122,7 @@ def entity_to_dict(entity, group_id=None, group_name=None, parent_id=None, paren
         "parent_id": parent_id,
         "parent_name": parent_name,
         "thumbnail_id": possible_thumbnail(entity),
+        "_native_data": get_attr(entity, "data") or {},
     }
 
 
@@ -157,19 +159,135 @@ def get_values_for_rows(entity_type, row_ids):
     return result
 
 
+
+def normalise_native_entity_type(value):
+    value = str(value or "").strip().lower().replace("_", "").replace("-", "")
+    aliases = {
+        "episode": "episode",
+        "episodes": "episode",
+        "sequence": "sequence",
+        "sequences": "sequence",
+        "shot": "shot",
+        "shots": "shot",
+        "asset": "asset",
+        "assets": "asset",
+    }
+    return aliases.get(value, value)
+
+
+def get_native_metadata_descriptors(project_id, entity_type=None):
+    descriptors = projects_service.get_metadata_descriptors(
+        project_id,
+        for_client=False,
+    ) or []
+
+    result = []
+    expected_type = normalise_native_entity_type(entity_type)
+
+    for descriptor in descriptors:
+        descriptor_type = normalise_native_entity_type(
+            get_attr(descriptor, "entity_type")
+            or get_attr(descriptor, "for_entity")
+            or get_attr(descriptor, "entity")
+        )
+
+        if expected_type and descriptor_type != expected_type:
+            continue
+
+        field_name = (
+            get_attr(descriptor, "field_name")
+            or get_attr(descriptor, "name")
+            or ""
+        )
+        display_name = (
+            get_attr(descriptor, "name")
+            or get_attr(descriptor, "label")
+            or field_name
+        )
+        native_type = (
+            get_attr(descriptor, "data_type")
+            or get_attr(descriptor, "field_type")
+            or get_attr(descriptor, "type")
+            or "text"
+        )
+        choices = (
+            get_attr(descriptor, "choices")
+            or get_attr(descriptor, "values")
+            or get_attr(descriptor, "options")
+            or []
+        )
+
+        if not field_name:
+            continue
+
+        result.append({
+            "id": str(get_attr(descriptor, "id") or ""),
+            "name": display_name,
+            "field_name": field_name,
+            "entity_type": descriptor_type,
+            "native_type": native_type,
+            "choices": choices,
+        })
+
+    result.sort(key=lambda item: str(item["name"]).lower())
+    return result
+
+
+def add_linked_values(rows, columns, values_by_entity):
+    linked_columns = [column for column in columns if column.field_type == "linked"]
+
+    if not linked_columns:
+        return values_by_entity
+
+    for row in rows:
+        row_id = row["id"]
+        row_values = dict(values_by_entity.get(row_id, {}))
+        native_data = row.get("_native_data") or {}
+
+        for column in linked_columns:
+            config = column.options_json if isinstance(column.options_json, dict) else {}
+            field_name = config.get("field_name")
+            native_name = config.get("native_name")
+
+            if field_name and field_name in native_data:
+                linked_value = native_data.get(field_name)
+            elif native_name and native_name in native_data:
+                linked_value = native_data.get(native_name)
+            else:
+                linked_value = ""
+
+            row_values[str(column.id)] = linked_value
+
+        values_by_entity[row_id] = row_values
+
+    return values_by_entity
+
+
+def public_row(row, values):
+    result = dict(row)
+    result.pop("_native_data", None)
+    result["values"] = values
+    return result
+
+
+def ensure_writable_column(field_id):
+    column = RestrictedMetadataField.get(field_id)
+    if column.field_type in {"formula", "linked"}:
+        raise ValueError(f"{column.field_type.capitalize()} columns are read-only.")
+    return column
+
+
 def make_table_response(project_id, entity_type, rows):
     columns = get_columns(project_id, entity_type)
     values_by_entity = get_values_for_rows(entity_type, [row["id"] for row in rows])
+    values_by_entity = add_linked_values(rows, columns, values_by_entity)
     values_by_entity = add_formula_values(rows, columns, values_by_entity)
 
     return {
         "entity_type": entity_type,
         "columns": [field_to_dict(column) for column in columns],
         "rows": [
-            {
-                **row,
-                "values": values_by_entity.get(row["id"], {}),
-            }
+            public_row(row, values_by_entity.get(row["id"], {}))
             for row in rows
         ],
     }
@@ -509,6 +627,24 @@ class ProjectContextResource(Resource):
         }
 
 
+class NativeMetadataDescriptorsResource(Resource):
+    @jwt_required()
+    def get(self):
+        require_admin()
+
+        project_id = get_project_id()
+        entity_type = request.args.get("entity_type")
+
+        if not project_id:
+            return {"error": "project_id or production_id is required"}, 400
+        if entity_type not in VALID_ENTITY_TYPES:
+            return {"error": "valid entity_type is required"}, 400
+
+        return {
+            "descriptors": get_native_metadata_descriptors(project_id, entity_type)
+        }
+
+
 class ColumnsResource(Resource):
     @jwt_required()
     def get(self):
@@ -554,6 +690,33 @@ class ColumnsResource(Resource):
             return {"error": "name is required"}, 400
         if field_type not in VALID_FIELD_TYPES:
             return {"error": "invalid field_type"}, 400
+
+        if field_type == "linked":
+            linked_config = data.get("options_json") or {}
+            if not isinstance(linked_config, dict):
+                return {"error": "linked options_json must be an object"}, 400
+
+            descriptors = get_native_metadata_descriptors(project_id, entity_type)
+            descriptor_id = str(linked_config.get("descriptor_id") or "")
+            field_name = linked_config.get("field_name")
+            descriptor = next(
+                (
+                    item for item in descriptors
+                    if (descriptor_id and item["id"] == descriptor_id)
+                    or (field_name and item["field_name"] == field_name)
+                ),
+                None,
+            )
+            if descriptor is None:
+                return {"error": "Selected native Kitsu metadata field was not found"}, 400
+
+            data["options_json"] = {
+                "descriptor_id": descriptor["id"],
+                "field_name": descriptor["field_name"],
+                "native_name": descriptor["name"],
+                "native_type": descriptor["native_type"],
+                "choices": descriptor.get("choices") or [],
+            }
 
         column = RestrictedMetadataField.create(
             project_id=UUID(str(project_id)),
@@ -909,6 +1072,10 @@ class CellResource(Resource):
         data = request.get_json() or {}
 
         field_id = UUID(str(data["field_id"]))
+        try:
+            ensure_writable_column(field_id)
+        except ValueError as exc:
+            return {"error": str(exc)}, 400
         entity_type = data["entity_type"]
         entity_id = UUID(str(data["entity_id"]))
         value_json = data.get("value")
@@ -944,6 +1111,10 @@ class BulkSetResource(Resource):
         data = request.get_json() or {}
 
         field_id = UUID(str(data["field_id"]))
+        try:
+            ensure_writable_column(field_id)
+        except ValueError as exc:
+            return {"error": str(exc)}, 400
         entity_type = data["entity_type"]
         entity_ids = data.get("entity_ids", [])
         new_value = data.get("value")
@@ -1112,6 +1283,7 @@ class ExportCsvResource(Resource):
                 return [row.get("name") or ""]
 
         values_by_entity = get_values_for_rows(entity_type, [row["id"] for row in rows])
+        values_by_entity = add_linked_values(rows, columns, values_by_entity)
         values_by_entity = add_formula_values(rows, columns, values_by_entity)
 
         output = io.StringIO()

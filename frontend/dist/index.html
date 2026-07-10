@@ -394,6 +394,13 @@
       font-weight: 700;
     }
 
+    .linked-result {
+      cursor: default;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .cell-checklist {
       display: flex;
       flex-direction: column;
@@ -571,9 +578,14 @@
           <option value="tags">List of tags</option>
           <option value="checklist">Checklist</option>
           <option value="formula">Formula</option>
+          <option value="linked">Linked</option>
         </select>
 
         <input id="column-options" placeholder="Options, comma separated">
+
+        <select id="linked-native-column" style="display:none">
+          <option value="">Choose native Kitsu metadata…</option>
+        </select>
 
         <button class="primary" onclick="createColumn()">Create Column</button>
       </div>
@@ -629,6 +641,8 @@
     let entityType = "episode";
     let projectContext = null;
     let activePick = null;
+    let nativeMetadataDescriptors = [];
+    let nativeMetadataEntityType = null;
 
     const selectedByTab = {
       episode: new Set(),
@@ -1124,7 +1138,76 @@
       `;
     }
 
+    async function loadNativeMetadataDescriptors(force = false) {
+      if (!force && nativeMetadataEntityType === entityType) {
+        populateLinkedNativeColumnSelector();
+        return;
+      }
+
+      const data = await apiGet(
+        "/native-metadata?production_id=" + encodeURIComponent(productionId) +
+        "&entity_type=" + encodeURIComponent(entityType)
+      );
+
+      nativeMetadataDescriptors = data.descriptors || [];
+      nativeMetadataEntityType = entityType;
+      populateLinkedNativeColumnSelector();
+    }
+
+    function populateLinkedNativeColumnSelector() {
+      const select = document.getElementById("linked-native-column");
+      if (!select) return;
+
+      select.innerHTML = '<option value="">Choose native Kitsu metadata…</option>';
+
+      nativeMetadataDescriptors.forEach(descriptor => {
+        const option = document.createElement("option");
+        option.value = descriptor.id || descriptor.field_name;
+        option.textContent = descriptor.name +
+          (descriptor.native_type ? " (" + descriptor.native_type + ")" : "");
+        option.dataset.fieldName = descriptor.field_name;
+        option.dataset.nativeName = descriptor.name;
+        option.dataset.nativeType = descriptor.native_type || "text";
+        option.dataset.choices = JSON.stringify(descriptor.choices || []);
+        select.appendChild(option);
+      });
+    }
+
+    function linkedColumnConfigFromSelector() {
+      const select = document.getElementById("linked-native-column");
+      const option = select && select.options[select.selectedIndex];
+      if (!option || !option.value) return null;
+
+      let choices = [];
+      try {
+        choices = JSON.parse(option.dataset.choices || "[]");
+      } catch (error) {
+        choices = [];
+      }
+
+      return {
+        descriptor_id: option.value,
+        field_name: option.dataset.fieldName,
+        native_name: option.dataset.nativeName,
+        native_type: option.dataset.nativeType || "text",
+        choices
+      };
+    }
+
+    function formatLinkedValue(value) {
+      if (value === null || value === undefined) return "";
+      if (Array.isArray(value)) return value.join(", ");
+      if (typeof value === "object") return JSON.stringify(value);
+      if (value === true) return "✓";
+      if (value === false) return "";
+      return String(value);
+    }
+
     function renderCell(row, column, value) {
+      if (column.field_type === "linked") {
+        return `<span class="formula-result linked-result">${escapeHtml(formatLinkedValue(value))}</span>`;
+      }
+
       if (column.field_type === "formula") {
         return renderFormula(row, column);
       }
@@ -1383,14 +1466,23 @@
       document.getElementById("column-modal").classList.remove("open");
     }
 
-    function onColumnTypeChange() {
+    async function onColumnTypeChange() {
       const type = document.getElementById("column-type").value;
       const optionsInput = document.getElementById("column-options");
       const formulaTools = document.getElementById("formula-tools");
+      const linkedSelect = document.getElementById("linked-native-column");
+
+      optionsInput.style.display = "";
+      linkedSelect.style.display = "none";
 
       if (type === "formula") {
         optionsInput.placeholder = "Formula, e.g. [Cost] * [Days]";
         formulaTools.classList.add("open");
+      } else if (type === "linked") {
+        optionsInput.style.display = "none";
+        linkedSelect.style.display = "";
+        formulaTools.classList.remove("open");
+        await loadNativeMetadataDescriptors();
       } else {
         optionsInput.placeholder = "Options, comma separated";
         formulaTools.classList.remove("open");
@@ -1427,7 +1519,10 @@
         tr.innerHTML = `
           <td><input value="${escapeAttr(column.name)}" onchange="updateColumn('${column.id}', 'name', this.value)"></td>
           <td>${fieldTypeLabel(column.field_type)}</td>
-          <td><input value="${escapeAttr(getColumnOptionsDisplay(column))}" onchange="updateColumnOptions('${column.id}', this.value)"></td>
+          <td>${column.field_type === "linked"
+            ? `<span class="formula-result linked-result">${escapeHtml(getColumnOptionsDisplay(column))}</span>`
+            : `<input value="${escapeAttr(getColumnOptionsDisplay(column))}" onchange="updateColumnOptions('${column.id}', this.value)">`
+          }</td>
           <td><button class="danger" onclick="deleteColumn('${column.id}')">Delete</button></td>
         `;
         body.appendChild(tr);
@@ -1437,6 +1532,11 @@
     function getColumnOptionsDisplay(column) {
       if (column.field_type === "formula") {
         return getFormulaText(column);
+      }
+
+      if (column.field_type === "linked") {
+        const config = column.options_json || {};
+        return config.native_name || config.field_name || "";
       }
 
       if (Array.isArray(column.options_json)) {
@@ -1454,7 +1554,8 @@
         single_select: "List of values",
         tags: "List of tags",
         checklist: "Checklist",
-        formula: "Formula"
+        formula: "Formula",
+        linked: "Linked"
       }[type] || type;
     }
 
@@ -1471,6 +1572,8 @@
 
       if (column && column.field_type === "formula") {
         optionsJson = { formula: raw };
+      } else if (column && column.field_type === "linked") {
+        return;
       } else {
         optionsJson = raw.split(",").map(x => x.trim()).filter(Boolean);
       }
@@ -1499,6 +1602,12 @@
 
       if (fieldType === "formula") {
         options = { formula: rawOptions };
+      } else if (fieldType === "linked") {
+        options = linkedColumnConfigFromSelector();
+        if (!options) {
+          alert("Choose a native Kitsu metadata column to link.");
+          return;
+        }
       } else {
         options = rawOptions ? rawOptions.split(",").map(x => x.trim()).filter(Boolean) : [];
       }
@@ -1513,6 +1622,7 @@
 
       document.getElementById("column-name").value = "";
       document.getElementById("column-options").value = "";
+      document.getElementById("linked-native-column").value = "";
       await reloadCurrentTab();
     }
 

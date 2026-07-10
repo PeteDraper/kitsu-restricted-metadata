@@ -1,0 +1,1593 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Restricted Metadata</title>
+  <style>
+    :root {
+      --background: #FFFFFF;
+      --background-alt: #F6F6F6;
+      --background-alt-2: #FFF;
+      --background-block: #FFFFFF;
+      --background-page: #F6F6F6;
+      --background-hover: #E1E4FF;
+      --background-selected: #CFD1FF;
+      --border: #DBDBDB;
+      --border-hover: #B5B5B5;
+      --text: #7A7A7A;
+      --text-strong: #333;
+      --green: #00B242;
+      --red: #FF3860;
+      --white: #FEFEFE;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background: #36393F;
+        --background-alt: #46494F;
+        --background-alt-2: #46494F;
+        --background-block: #46494F;
+        --background-hover: #5E6169;
+        --background-page: #36393F;
+        --background-selected: #5E60BA;
+        --border: #25282E;
+        --border-hover: #6b7280;
+        --text: #EEEEEE;
+        --text-strong: #FEFEFE;
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--background-page);
+      color: var(--text);
+      font-family: Lato, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      font-size: 14px;
+    }
+
+    body {
+      padding: 18px 10px 10px 10px;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      max-height: calc(100vh - 12px);
+      overflow: hidden;
+    }
+
+    .topbar {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+      align-items: center;
+      flex: 0 0 auto;
+    }
+
+    .left-controls,
+    .right-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .tab,
+    button {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--background-alt-2);
+      color: var(--text);
+      padding: 7px 11px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .tab.active {
+      border-color: var(--green);
+      color: var(--text-strong);
+      background: var(--background-hover);
+    }
+
+    button.primary {
+      background: var(--green);
+      color: var(--white);
+      border-color: var(--green);
+    }
+
+    button.danger {
+      background: var(--red);
+      color: var(--white);
+      border-color: var(--red);
+    }
+
+    .small-button {
+      width: 22px;
+      min-width: 22px;
+      max-width: 22px;
+      padding: 2px 0;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-right: 4px;
+      text-align: center;
+    }
+
+    input, select {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--background-alt-2);
+      color: var(--text);
+      padding: 7px 9px;
+      font: inherit;
+    }
+
+    .panel {
+      flex: 1 1 auto;
+      min-height: 0;
+      background: var(--background-block);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .table-wrap {
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+      max-width: 100%;
+      overflow: auto;
+      background: var(--background-block);
+      border-radius: 10px;
+      scrollbar-gutter: stable both-edges;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border-hover) var(--background-alt);
+    }
+
+    .table-wrap::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    .table-wrap::-webkit-scrollbar-track {
+      background: var(--background-alt);
+      border-radius: 10px;
+    }
+
+    .table-wrap::-webkit-scrollbar-thumb {
+      background: var(--border-hover);
+      border-radius: 10px;
+      border: 2px solid var(--background-alt);
+    }
+
+    .table-wrap::-webkit-scrollbar-thumb:hover {
+      background: var(--text);
+    }
+
+    .table-wrap::-webkit-scrollbar-corner {
+      background: var(--background-alt);
+    }
+
+    table {
+      width: auto;
+      min-width: 0;
+      border-collapse: collapse;
+      table-layout: fixed;
+      background: var(--background-block);
+    }
+
+    col.col-check { width: 30px; }
+    col.col-thumb { width: 54px; }
+    col.col-name { width: 220px; }
+    col.col-meta { width: 180px; }
+
+    th, td {
+      border: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--background-alt);
+      color: var(--text-strong);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 7px 8px;
+      resize: horizontal;
+      overflow: auto;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    td {
+      padding: 4px 7px;
+      min-height: 36px;
+    }
+
+    tr:hover td { background: var(--background-hover); }
+
+    .check-col {
+      width: 30px !important;
+      min-width: 30px !important;
+      max-width: 30px !important;
+      resize: none;
+      vertical-align: middle;
+      padding: 4px 3px !important;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .thumb-col {
+      width: 54px !important;
+      min-width: 54px !important;
+      max-width: 54px !important;
+      resize: none;
+      vertical-align: middle;
+      padding: 4px 3px !important;
+      text-align: left;
+      overflow: hidden;
+    }
+    .name-col { width: 220px; min-width: 160px; vertical-align: middle; }
+    .meta-col { width: 180px; min-width: 110px; }
+
+    .group-row td {
+      background: #dfe3ea;
+      color: #222;
+      font-weight: 700;
+      vertical-align: middle;
+      border-top: 3px solid #9aa3b2;
+      border-bottom: 2px solid #9aa3b2;
+    }
+
+    .data-row-even td { background: var(--background-block); }
+    .data-row-odd td { background: var(--background-alt); }
+    .data-row-even:hover td, .data-row-odd:hover td { background: var(--background-hover); }
+
+    @media (prefers-color-scheme: dark) {
+      .group-row td {
+        background: #25282e;
+        color: var(--text-strong);
+        border-top: 3px solid #111318;
+        border-bottom: 2px solid #111318;
+      }
+
+      .data-row-even td { background: var(--background-block); }
+      .data-row-odd td { background: #3f424a; }
+    }
+
+    .nested-parent-row td {
+      border-top-width: 4px;
+    }
+
+    .nested-child-row td {
+      background: var(--background-alt);
+      border-top: 2px solid var(--border-hover);
+      border-bottom: 2px solid var(--border-hover);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .nested-child-row td {
+        background: #30333a;
+      }
+    }
+
+    .nested-parent-row .check-col,
+    .nested-child-row .check-col,
+    .nested-child-row .thumb-col {
+      vertical-align: middle;
+      padding: 4px 3px !important;
+      text-align: center;
+    }
+
+    .nested-parent-row td,
+    .nested-child-row td {
+      height: 36px;
+      padding-top: 4px;
+      padding-bottom: 4px;
+    }
+
+    .nested-child-title {
+      padding-left: 0;
+    }
+
+    .nested-child-row .small-button,
+    .nested-parent-row .small-button {
+      margin-left: 0;
+      margin-right: 0;
+      padding: 2px 5px;
+      min-width: 24px;
+    }
+
+    .group-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .group-count {
+      color: var(--text);
+      font-weight: 500;
+      opacity: 0.75;
+      margin-left: 8px;
+    }
+
+    .thumb {
+      width: 48px;
+      height: 28px;
+      object-fit: cover;
+      display: block;
+      border-radius: 6px;
+      background: var(--background-alt);
+      border: 1px solid var(--border);
+    }
+
+    .thumb-placeholder {
+      width: 48px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--background-alt);
+      border: 1px solid var(--border);
+    }
+
+    .cell-input,
+    .cell-select,
+    .cell-menu-button,
+    .formula-result {
+      width: 100%;
+      min-width: 100px;
+      height: 30px;
+      line-height: 18px;
+      padding: 5px 8px;
+      border: 1px solid transparent;
+      background: transparent;
+      border-radius: 6px;
+      text-align: left;
+      color: var(--text);
+      font: inherit;
+      display: block;
+    }
+
+    .cell-input:focus,
+    .cell-select:focus {
+      background: var(--background-alt-2);
+      border-color: var(--green);
+      outline: none;
+    }
+
+    .cell-select {
+      appearance: auto;
+    }
+
+    .cell-menu-button {
+      position: relative;
+      padding-right: 24px;
+      font-weight: 400;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .cell-menu-button::after {
+      content: "⌄";
+      position: absolute;
+      right: 8px;
+      top: 4px;
+      font-size: 16px;
+      color: var(--text);
+      opacity: 0.85;
+    }
+
+    .formula-result {
+      color: var(--text-strong);
+      cursor: default;
+    }
+
+    .formula-error {
+      color: var(--red);
+      font-weight: 700;
+    }
+
+    .cell-checklist {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: 3px 0;
+      min-width: 140px;
+    }
+
+    .cell-checklist label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      line-height: 18px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .cell-checklist input {
+      margin: 0;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0,0,0,0.45);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.open { display: flex; }
+
+    .modal-box {
+      width: min(920px, calc(100vw - 48px));
+      max-height: calc(100vh - 48px);
+      overflow: auto;
+      background: var(--background-block);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 18px;
+      color: var(--text-strong);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .column-list {
+      width: 100%;
+      min-width: auto;
+      table-layout: auto;
+    }
+
+    .pick-list label {
+      display: block;
+      padding: 8px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+
+    .pick-list label:hover {
+      background: var(--background-hover);
+    }
+
+    .formula-tools {
+      display: none;
+      margin: 8px 0 12px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--background-alt);
+      line-height: 1.45;
+    }
+
+    .formula-tools.open {
+      display: block;
+    }
+
+    .formula-help {
+      margin-bottom: 8px;
+    }
+
+    .formula-help code {
+      background: var(--background-block);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1px 5px;
+      color: var(--text-strong);
+    }
+
+    .formula-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .formula-buttons button {
+      padding: 4px 8px;
+      font-weight: 500;
+      border-radius: 8px;
+    }
+
+    .error {
+      color: var(--red);
+      font-weight: 700;
+      padding: 10px;
+    }
+
+    .loading-cell {
+      padding: 14px;
+      color: var(--text);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <div class="left-controls">
+      <button class="tab active" data-type="episode" onclick="setEntityType(event, 'episode')">Episodes</button>
+      <button class="tab" data-type="sequence" onclick="setEntityType(event, 'sequence')">Sequences</button>
+      <button class="tab" data-type="shot" onclick="setEntityType(event, 'shot')">Shots</button>
+      <button class="tab" data-type="asset" onclick="setEntityType(event, 'asset')">Assets</button>
+    </div>
+
+    <div class="right-controls">
+      <button onclick="openColumnModal()">Manage Columns</button>
+      <button onclick="downloadCsv()">Export CSV</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="table-wrap">
+      <table>
+        <thead id="table-head"></thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="column-modal" class="modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>Manage Columns</h2>
+        <button onclick="closeColumnModal()">Close</button>
+      </div>
+
+      <div class="toolbar">
+        <input id="column-name" placeholder="Column name">
+
+        <select id="column-type" onchange="onColumnTypeChange()">
+          <option value="text">Text</option>
+          <option value="number">Number</option>
+          <option value="checkbox">Checkbox</option>
+          <option value="single_select">List of values</option>
+          <option value="tags">List of tags</option>
+          <option value="checklist">Checklist</option>
+          <option value="formula">Formula</option>
+        </select>
+
+        <input id="column-options" placeholder="Options, comma separated">
+
+        <button class="primary" onclick="createColumn()">Create Column</button>
+      </div>
+
+      <div id="formula-tools" class="formula-tools">
+        <div class="formula-help">
+          <strong>Formula help</strong><br>
+          Use column names in square brackets, for example <code>[Cost] * [Days]</code>.<br>
+          Supported operators: <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>^</code>, brackets, and percentages.<br>
+          Examples: <code>[Cost] * 1.2</code>, <code>[Area] ^ 2</code>, <code>[Price] * 10%</code>, <code>[Total] + [Markup Formula]</code>.<br>
+          Checkbox columns count as <code>1</code> when checked and <code>0</code> when unchecked.<br>
+          Text/List values are valid only when the cell content is numeric. Tags and Checklist columns cannot be used in formulas.<br>
+          Formula columns can reference other formula columns, but circular references will display <code>ERROR</code>.
+        </div>
+        <div>Click a column below to insert it into the formula:</div>
+        <div class="formula-buttons" id="formula-buttons"></div>
+      </div>
+
+      <table class="column-list">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Options / Formula</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="columns-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="pick-modal" class="modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 id="pick-title">Select Tags</h2>
+        <button onclick="closePickModal()">Close</button>
+      </div>
+
+      <div id="pick-list" class="pick-list"></div>
+
+      <div class="toolbar" style="margin-top: 12px;">
+        <button class="primary" onclick="savePickModal()">Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "/api/plugins/restricted-metadata";
+    const params = new URLSearchParams(window.location.search);
+    const productionId = params.get("production_id") || params.get("project_id");
+
+    let entityType = "episode";
+    let projectContext = null;
+    let activePick = null;
+
+    const selectedByTab = {
+      episode: new Set(),
+      sequence: new Set(),
+      shot: new Set(),
+      asset: new Set()
+    };
+
+    const tabState = {
+      episode: { loaded: false, loading: false, columns: [], rows: [], groups: [], groupRows: {}, expandedGroups: new Set(), hasGroups: false },
+      sequence: { loaded: false, loading: false, columns: [], rows: [], groups: [], groupRows: {}, expandedGroups: new Set(), hasGroups: false },
+      shot: { loaded: false, loading: false, columns: [], rows: [], groups: [], groupRows: {}, expandedGroups: new Set(), hasGroups: true, nestedGroups: false },
+      asset: { loaded: false, loading: false, columns: [], rows: [], groups: [], groupRows: {}, expandedGroups: new Set(), hasGroups: true, nestedGroups: false }
+    };
+
+    function apiPath(path) { return API_BASE + path; }
+    function currentState() { return tabState[entityType]; }
+    function currentSelected() { return selectedByTab[entityType]; }
+    function currentColumns() { return currentState().columns || []; }
+
+    function currentRows() {
+      const state = currentState();
+      if (!state.hasGroups) return state.rows || [];
+      return Object.values(state.groupRows).flat().filter(Boolean);
+    }
+
+    function titleFor(type) {
+      return { episode: "Episodes", sequence: "Sequences", shot: "Shots", asset: "Assets" }[type] || type;
+    }
+
+    async function apiGet(path) {
+      const response = await fetch(apiPath(path), { credentials: "include" });
+      if (!response.ok) throw new Error(await response.text());
+      return await response.json();
+    }
+
+    async function apiPost(path, payload) {
+      const response = await fetch(apiPath(path), {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error(await response.text());
+      return await response.json();
+    }
+
+    async function apiPatch(path, payload) {
+      const response = await fetch(apiPath(path), {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error(await response.text());
+      return await response.json();
+    }
+
+    async function apiDelete(path) {
+      const response = await fetch(apiPath(path), { method: "DELETE", credentials: "include" });
+      if (!response.ok) throw new Error(await response.text());
+      return await response.json();
+    }
+
+    async function loadProject() {
+      const data = await apiGet("/context?production_id=" + productionId);
+      projectContext = data.project;
+
+      if (!projectContext.has_episodes) {
+        document.querySelector("[data-type='episode']").style.display = "none";
+        tabState.sequence.hasGroups = false;
+
+        if (entityType === "episode") {
+          entityType = "sequence";
+          document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
+          document.querySelector("[data-type='sequence']").classList.add("active");
+        }
+      } else {
+        tabState.sequence.hasGroups = true;
+      }
+    }
+
+    function setEntityType(event, type) {
+      entityType = type;
+
+      document.querySelectorAll(".tab").forEach(tab => tab.classList.remove("active"));
+      event.target.classList.add("active");
+
+      renderHeader();
+      renderRows();
+
+      if (!currentState().loaded && !currentState().loading) {
+        loadTab(type);
+      }
+    }
+
+    async function loadColumns(type) {
+      const data = await apiGet("/columns?production_id=" + productionId + "&entity_type=" + type);
+      tabState[type].columns = data.columns || [];
+    }
+
+    async function loadGroups(type) {
+      const state = tabState[type];
+
+      state.nestedGroups = false;
+
+      if (type === "episode") {
+        state.hasGroups = false;
+        return;
+      }
+
+      if (type === "sequence") {
+        if (!projectContext.has_episodes) {
+          state.hasGroups = false;
+          return;
+        }
+
+        const data = await apiGet("/groups/episodes?production_id=" + productionId);
+        state.groups = data.groups || [];
+        state.hasGroups = true;
+        state.nestedGroups = false;
+        return;
+      }
+
+      if (type === "shot") {
+        if (projectContext.has_episodes) {
+          const data = await apiGet("/groups/shot-episodes?production_id=" + productionId);
+          state.groups = data.groups || [];
+          state.hasGroups = true;
+          state.nestedGroups = true;
+        } else {
+          const data = await apiGet("/groups/sequences?production_id=" + productionId);
+          state.groups = data.groups || [];
+          state.hasGroups = true;
+          state.nestedGroups = false;
+        }
+        return;
+      }
+
+      if (type === "asset") {
+        if (projectContext.has_episodes) {
+          const data = await apiGet("/groups/asset-packs?production_id=" + productionId);
+          state.groups = data.groups || [];
+          state.hasGroups = true;
+          state.nestedGroups = true;
+        } else {
+          const data = await apiGet("/groups/asset-types?production_id=" + productionId);
+          state.groups = data.groups || [];
+          state.hasGroups = true;
+          state.nestedGroups = false;
+        }
+      }
+    }
+
+    async function loadFlatRows(type) {
+      const data = await apiGet("/rows/" + titleFor(type).toLowerCase() + "?production_id=" + productionId);
+      tabState[type].rows = data.rows || [];
+      tabState[type].columns = data.columns || tabState[type].columns || [];
+    }
+
+    async function loadTab(type = entityType, force = false) {
+      const state = tabState[type];
+
+      if (state.loaded && !force) {
+        if (type === entityType) renderTable();
+        return;
+      }
+
+      state.loading = true;
+
+      if (type === entityType) {
+        renderHeader();
+        document.getElementById("table-body").innerHTML = "";
+      }
+
+      await loadColumns(type);
+      await loadGroups(type);
+
+      if (!state.hasGroups) {
+        await loadFlatRows(type);
+      }
+
+      state.loaded = true;
+      state.loading = false;
+
+      if (type === entityType) {
+        renderTable();
+        renderColumnManager();
+      }
+    }
+
+    async function reloadCurrentTab() {
+      const state = currentState();
+      state.loaded = false;
+      state.loading = false;
+      state.columns = [];
+      state.rows = [];
+      state.groups = [];
+      state.groupRows = {};
+      state.expandedGroups = new Set();
+      await loadTab(entityType, true);
+    }
+
+    async function expandGroup(groupId) {
+      const state = currentState();
+
+      if (!state.expandedGroups.has(groupId)) {
+        state.expandedGroups.add(groupId);
+      }
+
+      // Top-level nested groups do not load rows directly.
+      // They only reveal their child groups.
+      if (state.nestedGroups && !groupId.includes("::")) {
+        renderRows();
+        return;
+      }
+
+      if (state.groupRows[groupId]) {
+        renderRows();
+        return;
+      }
+
+      state.groupRows[groupId] = null;
+      renderRows();
+
+      let endpoint = "";
+
+      if (entityType === "sequence") {
+        endpoint = "/rows/sequences?production_id=" + productionId + "&episode_id=" + encodeURIComponent(groupId);
+      } else if (entityType === "shot") {
+        const sequenceId = state.nestedGroups ? groupId.split("::")[1] : groupId;
+        endpoint = "/rows/shots?production_id=" + productionId + "&sequence_id=" + encodeURIComponent(sequenceId);
+      } else if (entityType === "asset") {
+        if (state.nestedGroups) {
+          const parts = groupId.split("::");
+          const parentId = parts[0];
+          const assetTypeId = parts[1];
+
+          endpoint =
+            "/rows/assets?production_id=" +
+            productionId +
+            "&parent_id=" +
+            encodeURIComponent(parentId) +
+            "&asset_type_id=" +
+            encodeURIComponent(assetTypeId);
+        } else {
+          endpoint = "/rows/assets?production_id=" + productionId + "&asset_type_id=" + encodeURIComponent(groupId);
+        }
+      }
+
+      const data = await apiGet(endpoint);
+      state.groupRows[groupId] = data.rows || [];
+
+      if ((!state.columns || !state.columns.length) && data.columns) {
+        state.columns = data.columns;
+      }
+
+      renderTable();
+    }
+
+    function collapseGroup(groupId) {
+      currentState().expandedGroups.delete(groupId);
+      renderRows();
+    }
+
+    function toggleGroupCollapse(groupId) {
+      if (currentState().expandedGroups.has(groupId)) collapseGroup(groupId);
+      else expandGroup(groupId);
+    }
+
+    function renderTable() {
+      renderHeader();
+      renderRows();
+    }
+
+    function renderHeader() {
+      const columns = currentColumns();
+      const table = document.querySelector("table");
+      const minWidth = 30 + 54 + 220 + (columns.length * 180);
+      table.style.width = minWidth + "px";
+      table.style.minWidth = minWidth + "px";
+
+      let colgroup = "<colgroup>";
+      colgroup += "<col class='col-check'>";
+      colgroup += "<col class='col-thumb'>";
+      colgroup += "<col class='col-name'>";
+      columns.forEach(() => {
+        colgroup += "<col class='col-meta'>";
+      });
+      colgroup += "</colgroup>";
+
+      let html = "<tr>";
+      html += "<th class='check-col'></th>";
+      html += "<th class='thumb-col'></th>";
+      html += "<th class='name-col'>Name</th>";
+
+      columns.forEach(column => {
+        html += "<th class='meta-col'>" + escapeHtml(column.name) + "</th>";
+      });
+
+      html += "</tr>";
+
+      const existingColgroup = table.querySelector("colgroup");
+      if (existingColgroup) existingColgroup.remove();
+
+      table.insertAdjacentHTML("afterbegin", colgroup);
+      document.getElementById("table-head").innerHTML = html;
+    }
+
+    function groupLabelColspan(extraUsedColumns = 1) {
+      // Total columns = checkbox + thumbnail + name + metadata columns.
+      // extraUsedColumns is how many leading fixed columns are already occupied by this group row.
+      return Math.max(1, currentColumns().length + 3 - extraUsedColumns);
+    }
+
+    function renderRows() {
+      const state = currentState();
+      const columns = currentColumns();
+      const body = document.getElementById("table-body");
+
+      body.innerHTML = "";
+
+      if (state.loading) {
+        body.innerHTML = "";
+        return;
+      }
+
+      if (!state.loaded) {
+        body.innerHTML = "<tr><td colspan='99' class='loading-cell'>Click tab to load.</td></tr>";
+        return;
+      }
+
+      if (!state.hasGroups) {
+        renderFlatRows(body, state.rows || [], columns);
+        return;
+      }
+
+      if (!state.groups.length) {
+        body.innerHTML = "<tr><td colspan='99'>No rows found.</td></tr>";
+        return;
+      }
+
+      if (state.nestedGroups) {
+        renderNestedGroups(body, state, columns);
+        return;
+      }
+
+      state.groups.forEach(group => {
+        const expanded = state.expandedGroups.has(group.id);
+        const groupRows = state.groupRows[group.id];
+
+        const groupRow = document.createElement("tr");
+        groupRow.className = "group-row";
+        groupRow.innerHTML = `
+          <td class="check-col">
+            <input type="checkbox" ${isGroupFullySelected(group.id) ? "checked" : ""} onchange="toggleGroupSelection('${escapeAttr(group.id)}', this.checked)">
+          </td>
+          <td colspan="${groupLabelColspan(1)}">
+            <span class="group-title">
+              <button class="small-button" onclick="toggleGroupCollapse('${escapeAttr(group.id)}')">${expanded ? "▼" : "▶"}</button>
+              ${escapeHtml(group.name || "Ungrouped")}
+              <span class="group-count">${group.count ?? ""}</span>
+            </span>
+          </td>
+        `;
+        body.appendChild(groupRow);
+
+        if (!expanded) return;
+
+        if (groupRows === null) {
+          return;
+        }
+
+        renderFlatRows(body, groupRows || [], columns, group.id);
+      });
+    }
+
+    function renderNestedGroups(body, state, columns) {
+      state.groups.forEach(parentGroup => {
+        const parentExpanded = state.expandedGroups.has(parentGroup.id);
+
+        const parentRow = document.createElement("tr");
+        parentRow.className = "group-row nested-parent-row";
+        parentRow.innerHTML = `
+          <td class="check-col">
+            <button class="small-button" onclick="toggleGroupCollapse('${escapeAttr(parentGroup.id)}')">${parentExpanded ? "▼" : "▶"}</button>
+          </td>
+          <td colspan="${groupLabelColspan(1)}">
+            <span class="group-title">
+              ${escapeHtml(parentGroup.name || "Ungrouped")}
+              <span class="group-count">${parentGroup.count ?? ""}</span>
+            </span>
+          </td>
+        `;
+        body.appendChild(parentRow);
+
+        if (!parentExpanded) return;
+
+        (parentGroup.children || []).forEach(childGroup => {
+          const childKey = parentGroup.id + "::" + childGroup.id;
+          const childExpanded = state.expandedGroups.has(childKey);
+          const groupRows = state.groupRows[childKey];
+
+          const childRow = document.createElement("tr");
+          childRow.className = "group-row nested-child-row";
+          childRow.innerHTML = `
+            <td class="check-col">
+              <input type="checkbox" ${isGroupFullySelected(childKey) ? "checked" : ""} onchange="toggleGroupSelection('${escapeAttr(childKey)}', this.checked)">
+            </td>
+            <td class="thumb-col">
+              <button class="small-button" onclick="toggleGroupCollapse('${escapeAttr(childKey)}')">${childExpanded ? "▼" : "▶"}</button>
+            </td>
+            <td colspan="${groupLabelColspan(2)}">
+              <span class="group-title nested-child-title">
+                ${escapeHtml(childGroup.name || "Ungrouped")}
+                <span class="group-count">${childGroup.count ?? ""}</span>
+              </span>
+            </td>
+          `;
+          body.appendChild(childRow);
+
+          if (!childExpanded) return;
+
+          if (groupRows === null) {
+            body.innerHTML += "<tr><td colspan='99' class='loading-cell'>Loading section...</td></tr>";
+            return;
+          }
+
+          renderFlatRows(body, groupRows || [], columns, childKey);
+        });
+      });
+    }
+
+    function renderFlatRows(body, rows, columns, groupId = null) {
+      if (!rows.length) {
+        body.innerHTML += "<tr><td colspan='99'>No rows found.</td></tr>";
+        return;
+      }
+
+      rows.forEach((row, rowIndex) => {
+        const tr = document.createElement("tr");
+        tr.className = rowIndex % 2 === 0 ? "data-row-even" : "data-row-odd";
+        if (groupId) tr.dataset.group = groupId;
+
+        let html = "";
+        html += `<td class="check-col"><input type="checkbox" class="row-check" value="${row.id}" ${currentSelected().has(row.id) ? "checked" : ""} onchange="toggleRow(this)"></td>`;
+        html += `<td class="thumb-col">${renderThumbnail(row)}</td>`;
+        html += `<td class="name-col">${escapeHtml(row.name || "")}</td>`;
+
+        columns.forEach(column => {
+          const value = row.values ? row.values[column.id] : null;
+          html += "<td class='meta-col'>" + renderCell(row, column, value) + "</td>";
+        });
+
+        tr.innerHTML = html;
+        body.appendChild(tr);
+      });
+    }
+
+    function isGroupFullySelected(groupId) {
+      const rows = currentState().groupRows[groupId] || [];
+      if (!rows.length) return false;
+      return rows.every(row => currentSelected().has(row.id));
+    }
+
+    async function toggleGroupSelection(groupId, checked) {
+      const state = currentState();
+
+      if (!state.groupRows[groupId]) {
+        await expandGroup(groupId);
+      }
+
+      const rows = state.groupRows[groupId] || [];
+
+      rows.forEach(row => {
+        if (checked) currentSelected().add(row.id);
+        else currentSelected().delete(row.id);
+      });
+
+      renderRows();
+    }
+
+    function renderThumbnail(row) {
+      if (!row.thumbnail_id) return "<div class='thumb-placeholder'></div>";
+      const id = row.thumbnail_id;
+
+      return `
+        <img
+          class="thumb"
+          src="/api/pictures/thumbnails/preview-files/${id}.png"
+          onerror="this.onerror=null; this.src='/api/pictures/originals/preview-files/${id}.png'"
+        >
+      `;
+    }
+
+    function renderCell(row, column, value) {
+      if (column.field_type === "formula") {
+        return renderFormula(row, column);
+      }
+
+      if (column.field_type === "checkbox") {
+        return `<input type="checkbox" ${value === true ? "checked" : ""} onchange="saveCell('${row.id}', '${column.id}', this.checked, true)">`;
+      }
+
+      if (column.field_type === "number") {
+        return `<input class="cell-input" type="number" value="${escapeAttr(value ?? "")}" onchange="saveCell('${row.id}', '${column.id}', this.value === '' ? null : Number(this.value), true)">`;
+      }
+
+      if (column.field_type === "single_select") {
+        let html = `<select class="cell-select" onchange="saveCell('${row.id}', '${column.id}', this.value, true)">`;
+        html += "<option value=''></option>";
+
+        (column.options_json || []).forEach(option => {
+          html += `<option value="${escapeAttr(option)}" ${option === value ? "selected" : ""}>${escapeHtml(option)}</option>`;
+        });
+
+        html += "</select>";
+        return html;
+      }
+
+      if (column.field_type === "tags") {
+        const values = Array.isArray(value) ? value : [];
+        const label = values.length ? values.join(", ") : "Select...";
+        return `<button class="cell-menu-button" onclick="openPickModal('${row.id}', '${column.id}')">${escapeHtml(label)}</button>`;
+      }
+
+      if (column.field_type === "checklist") {
+        return renderChecklist(row, column, Array.isArray(value) ? value : []);
+      }
+
+      return `<input class="cell-input" value="${escapeAttr(value ?? "")}" onchange="saveCell('${row.id}', '${column.id}', this.value, true)">`;
+    }
+
+    function getFormulaText(column) {
+      if (!column.options_json) return "";
+      if (typeof column.options_json === "string") return column.options_json;
+      if (Array.isArray(column.options_json)) return column.options_json.join(" ");
+      if (typeof column.options_json === "object") return column.options_json.formula || "";
+      return "";
+    }
+
+    function renderFormula(row, column) {
+      const result = evaluateFormula(row, column);
+      const isError = result === "ERROR";
+      return `<span class="formula-result ${isError ? "formula-error" : ""}">${escapeHtml(result)}</span>`;
+    }
+
+    function evaluateFormula(row, formulaColumn, visitedFormulaIds = new Set()) {
+      try {
+        if (visitedFormulaIds.has(formulaColumn.id)) {
+          throw new Error("circular formula reference");
+        }
+
+        visitedFormulaIds.add(formulaColumn.id);
+
+        let formula = getFormulaText(formulaColumn).trim();
+
+        if (!formula) return "";
+
+        const columns = currentColumns();
+
+        formula = formula.replace(/\[([^\]]+)\]/g, function(match, columnName) {
+          const referencedColumn = columns.find(c => c.name === columnName);
+
+          if (!referencedColumn) throw new Error("missing column");
+
+          if (referencedColumn.field_type === "tags" || referencedColumn.field_type === "checklist") {
+            throw new Error("invalid column type");
+          }
+
+          if (referencedColumn.field_type === "formula") {
+            const nestedValue = evaluateFormula(row, referencedColumn, new Set(visitedFormulaIds));
+            const nestedNumber = Number(nestedValue);
+
+            if (!Number.isFinite(nestedNumber)) {
+              throw new Error("invalid nested formula");
+            }
+
+            return String(nestedNumber);
+          }
+
+          const rawValue = row.values ? row.values[referencedColumn.id] : null;
+
+          if (referencedColumn.field_type === "checkbox") {
+            return rawValue === true ? "1" : "0";
+          }
+
+          const numberValue = Number(rawValue);
+
+          if (!Number.isFinite(numberValue)) throw new Error("non numeric value");
+
+          return String(numberValue);
+        });
+
+        formula = normaliseFormulaExpression(formula);
+
+        if (!/^[0-9+\-*/().\s]+$/.test(formula)) {
+          throw new Error("unsafe formula");
+        }
+
+        const result = Function('"use strict"; return (' + formula + ')')();
+
+        if (!Number.isFinite(result)) {
+          throw new Error("bad result");
+        }
+
+        return String(result);
+      } catch (error) {
+        return "ERROR";
+      }
+    }
+
+    function normaliseFormulaExpression(formula) {
+      let expression = formula;
+
+      expression = expression.replace(/(\d+(?:\.\d+)?)\s*%/g, function(match, numberPart) {
+        return "(" + numberPart + "/100)";
+      });
+
+      expression = expression.replace(/\^/g, "**");
+
+      return expression;
+    }
+
+    function renderChecklist(row, column, values) {
+      let html = `<div class="cell-checklist">`;
+
+      (column.options_json || []).forEach(option => {
+        const checked = values.includes(option) ? "checked" : "";
+        html += `
+          <label>
+            <input type="checkbox" ${checked} onchange="saveChecklist('${row.id}', '${column.id}', this)">
+            ${escapeHtml(option)}
+          </label>
+        `;
+      });
+
+      html += "</div>";
+      return html;
+    }
+
+    async function saveChecklist(entityId, fieldId, changedCheckbox) {
+      const wrapper = changedCheckbox.closest(".cell-checklist");
+      const values = Array.from(wrapper.querySelectorAll("input:checked"))
+        .map(input => input.parentElement.innerText.trim());
+
+      await saveCell(entityId, fieldId, values, true);
+      renderRows();
+    }
+
+    function openPickModal(entityId, fieldId) {
+      const column = currentColumns().find(c => c.id === fieldId);
+      const row = currentRows().find(r => r.id === entityId);
+      const current = row && row.values && Array.isArray(row.values[fieldId]) ? row.values[fieldId] : [];
+
+      activePick = { entityId, fieldId };
+
+      document.getElementById("pick-title").innerText = "Select Tags";
+
+      const list = document.getElementById("pick-list");
+      list.innerHTML = "";
+
+      (column.options_json || []).forEach(option => {
+        const checked = current.includes(option) ? "checked" : "";
+        const label = document.createElement("label");
+        label.innerHTML = `<input type="checkbox" value="${escapeAttr(option)}" ${checked}> ${escapeHtml(option)}`;
+        list.appendChild(label);
+      });
+
+      document.getElementById("pick-modal").classList.add("open");
+    }
+
+    function closePickModal() {
+      document.getElementById("pick-modal").classList.remove("open");
+      activePick = null;
+    }
+
+    async function savePickModal() {
+      if (!activePick) return;
+
+      const values = Array.from(document.querySelectorAll("#pick-list input:checked"))
+        .map(input => input.value);
+
+      await saveCell(activePick.entityId, activePick.fieldId, values, true);
+      closePickModal();
+      renderRows();
+    }
+
+    function getTargetIdsForEdit(entityId) {
+      if (currentSelected().has(entityId) && currentSelected().size > 1) {
+        return Array.from(currentSelected());
+      }
+      return [entityId];
+    }
+
+    async function saveCell(entityId, fieldId, value, shouldRender) {
+      const targetIds = getTargetIdsForEdit(entityId);
+
+      if (targetIds.length > 1) {
+        await apiPost("/bulk-set", {
+          field_id: fieldId,
+          entity_type: entityType,
+          entity_ids: targetIds,
+          value
+        });
+      } else {
+        await apiPost("/cell", {
+          field_id: fieldId,
+          entity_type: entityType,
+          entity_id: entityId,
+          value
+        });
+      }
+
+      applyLocalValue(targetIds, fieldId, value);
+
+      if (shouldRender) {
+        renderRows();
+      }
+    }
+
+    function applyLocalValue(targetIds, fieldId, value) {
+      const updateRow = row => {
+        if (targetIds.includes(row.id)) {
+          if (!row.values) row.values = {};
+          row.values[fieldId] = value;
+        }
+      };
+
+      currentState().rows.forEach(updateRow);
+
+      Object.values(currentState().groupRows).forEach(groupRows => {
+        if (Array.isArray(groupRows)) {
+          groupRows.forEach(updateRow);
+        }
+      });
+    }
+
+    function toggleRow(checkbox) {
+      if (checkbox.checked) currentSelected().add(checkbox.value);
+      else currentSelected().delete(checkbox.value);
+    }
+
+    function openColumnModal() {
+      document.getElementById("column-modal").classList.add("open");
+      renderColumnManager();
+      renderFormulaButtons();
+      onColumnTypeChange();
+    }
+
+    function closeColumnModal() {
+      document.getElementById("column-modal").classList.remove("open");
+    }
+
+    function onColumnTypeChange() {
+      const type = document.getElementById("column-type").value;
+      const optionsInput = document.getElementById("column-options");
+      const formulaTools = document.getElementById("formula-tools");
+
+      if (type === "formula") {
+        optionsInput.placeholder = "Formula, e.g. [Cost] * [Days]";
+        formulaTools.classList.add("open");
+      } else {
+        optionsInput.placeholder = "Options, comma separated";
+        formulaTools.classList.remove("open");
+      }
+    }
+
+    function renderFormulaButtons() {
+      const box = document.getElementById("formula-buttons");
+      if (!box) return;
+
+      box.innerHTML = "";
+
+      currentColumns()
+        .filter(column => !["tags", "checklist"].includes(column.field_type))
+        .forEach(column => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.innerText = column.name;
+          button.onclick = function() {
+            const input = document.getElementById("column-options");
+            input.value += (input.value ? " " : "") + "[" + column.name + "]";
+            input.focus();
+          };
+          box.appendChild(button);
+        });
+    }
+
+    function renderColumnManager() {
+      const body = document.getElementById("columns-body");
+      body.innerHTML = "";
+
+      currentColumns().forEach(column => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><input value="${escapeAttr(column.name)}" onchange="updateColumn('${column.id}', 'name', this.value)"></td>
+          <td>${fieldTypeLabel(column.field_type)}</td>
+          <td><input value="${escapeAttr(getColumnOptionsDisplay(column))}" onchange="updateColumnOptions('${column.id}', this.value)"></td>
+          <td><button class="danger" onclick="deleteColumn('${column.id}')">Delete</button></td>
+        `;
+        body.appendChild(tr);
+      });
+    }
+
+    function getColumnOptionsDisplay(column) {
+      if (column.field_type === "formula") {
+        return getFormulaText(column);
+      }
+
+      if (Array.isArray(column.options_json)) {
+        return column.options_json.join(", ");
+      }
+
+      return "";
+    }
+
+    function fieldTypeLabel(type) {
+      return {
+        text: "Text",
+        number: "Number",
+        checkbox: "Checkbox",
+        single_select: "List of values",
+        tags: "List of tags",
+        checklist: "Checklist",
+        formula: "Formula"
+      }[type] || type;
+    }
+
+    async function updateColumn(columnId, key, value) {
+      const payload = {};
+      payload[key] = value;
+      await apiPatch("/columns/" + columnId, payload);
+      await reloadCurrentTab();
+    }
+
+    async function updateColumnOptions(columnId, raw) {
+      const column = currentColumns().find(c => c.id === columnId);
+      let optionsJson;
+
+      if (column && column.field_type === "formula") {
+        optionsJson = { formula: raw };
+      } else {
+        optionsJson = raw.split(",").map(x => x.trim()).filter(Boolean);
+      }
+
+      await apiPatch("/columns/" + columnId, { options_json: optionsJson });
+      await reloadCurrentTab();
+    }
+
+    async function deleteColumn(columnId) {
+      if (!confirm("Delete this restricted metadata column? Existing cell values will be hidden with the column.")) return;
+      await apiDelete("/columns/" + columnId);
+      await reloadCurrentTab();
+    }
+
+    async function createColumn() {
+      const name = document.getElementById("column-name").value.trim();
+      const fieldType = document.getElementById("column-type").value;
+      const rawOptions = document.getElementById("column-options").value.trim();
+
+      if (!name) {
+        alert("Enter a column name.");
+        return;
+      }
+
+      let options;
+
+      if (fieldType === "formula") {
+        options = { formula: rawOptions };
+      } else {
+        options = rawOptions ? rawOptions.split(",").map(x => x.trim()).filter(Boolean) : [];
+      }
+
+      await apiPost("/columns", {
+        production_id: productionId,
+        entity_type: entityType,
+        name,
+        field_type: fieldType,
+        options_json: options
+      });
+
+      document.getElementById("column-name").value = "";
+      document.getElementById("column-options").value = "";
+      await reloadCurrentTab();
+    }
+
+    function downloadCsv() {
+      window.location.href =
+        API_BASE +
+        "/export/csv?production_id=" +
+        productionId +
+        "&entity_type=" +
+        entityType;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function escapeAttr(value) {
+      if (Array.isArray(value)) value = value.join(", ");
+      return escapeHtml(value === null || value === undefined ? "" : value);
+    }
+
+
+    function hideKitsuEpisodeSelector() {
+      try {
+        if (!window.parent || window.parent === window) return;
+
+        const parentDocument = window.parent.document;
+        const selectors = [
+          ".episode-selector",
+          ".episodes-selector",
+          ".episode-select",
+          "[data-testid='episode-selector']",
+          "[data-cy='episode-selector']"
+        ];
+
+        selectors.forEach(selector => {
+          parentDocument.querySelectorAll(selector).forEach(element => {
+            element.dataset.restrictedMetadataHidden = "true";
+            element.style.display = "none";
+          });
+        });
+
+        parentDocument.querySelectorAll("button, .button, .select, select, .navbar-item").forEach(element => {
+          const text = (element.innerText || element.textContent || "").trim().toLowerCase();
+          if (
+            text === "episode" ||
+            text.startsWith("episode ") ||
+            text.includes("episodes")
+          ) {
+            element.dataset.restrictedMetadataHidden = "true";
+            element.style.display = "none";
+          }
+        });
+      } catch (error) {
+        // Plugin iframe may not be allowed to alter the parent shell. Safe to ignore.
+      }
+    }
+
+    async function init() {
+      try {
+        hideKitsuEpisodeSelector();
+        await loadProject();
+        await loadTab(entityType);
+      } catch (error) {
+        document.getElementById("table-body").innerHTML =
+          "<tr><td colspan='99' class='error'>Administrator access required or plugin error.</td></tr>";
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

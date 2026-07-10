@@ -4,6 +4,7 @@ routes = [
     ("/health", resources.HealthResource),
 
     ("/context", resources.ProjectContextResource),
+    ("/native-metadata", resources.NativeMetadataDescriptorsResource),
 
     ("/columns", resources.ColumnsResource),
     ("/columns/<column_id>", resources.ColumnResource),
